@@ -28,7 +28,7 @@ The creator profiles and portfolio entries currently shown are demonstration con
 
 ## Development notes
 
-The initial Worker was deployed directly to the Cloudflare account while this repository was empty. This README records the current deployment and project status. The complete Worker source and subsequent application modules should be committed here before enabling Git-based automatic deployments, so the repository becomes the source of truth.
+The initial Worker was deployed directly to the Cloudflare account while this repository was empty. The deployed source has now been exported and committed as `worker.js`. Keep this repository in sync with Cloudflare when making future changes, so it can become the source of truth for the application.
 
 ## Brand
 
