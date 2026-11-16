@@ -4,31 +4,45 @@ A bilingual (Arabic/English) creative portfolio and discovery platform for photo
 
 ## Live preview
 
-- Production preview: https://lensora-platform.m7njordan.workers.dev
+- Production site: https://lensora-platform.m7njordan.workers.dev
 - Health check: https://lensora-platform.m7njordan.workers.dev/health
 
-## Current status
-
-The first public-facing landing page is deployed on Cloudflare Workers. It includes:
+## Current implementation
 
 - Arabic and English interface with RTL/LTR switching
-- Responsive navigation for mobile and desktop
-- Creative disciplines and portfolio showcase sections
-- Portfolio category filters and live text search
-- Creator preview cards
-- Black, charcoal, and gold visual identity
+- Responsive landing page, creator discovery, category filters, and service showcase
+- Account registration, sign-in, secure session cookies, and sign-out
+- Public creator profiles with owner-only profile editing
+- Curated profile fields: specialty, Jordanian city, experience, skills, and languages
+- Profile avatar uploads and portfolio image uploads
+- Free portfolio limit: 5 images; PRO limit: 10 images
+- Monthly PRO plan display: 10 JOD; activation is currently manual
+- Image lightbox with close and zoom controls
+- Cloudflare D1 for account/profile data and R2 for uploaded media
 
-The creator profiles and portfolio entries currently shown are demonstration content. Account registration, authentication, real portfolio uploads, ratings, notifications, and admin verification have not been implemented yet.
+Some directory cards, services, and showcase entries on the landing page are demonstration content; they are not real creator accounts or live service listings.
 
 ## Infrastructure
 
-- Hosting: Cloudflare Workers
-- Worker name: `lensora-platform`
-- GitHub repository: https://github.com/prosw-coder/lensora-platform
+- Hosting/runtime: Cloudflare Workers
+- Worker: `lensora-platform`
+- Database: Cloudflare D1
+- Media storage: Cloudflare R2
+- Source: https://github.com/prosw-coder/lensora-platform
 
-## Development notes
+## Security notes
 
-The initial Worker was deployed directly to the Cloudflare account while this repository was empty. The deployed source has now been exported and committed as `worker.js`. Keep this repository in sync with Cloudflare when making future changes, so it can become the source of truth for the application.
+- Passwords are stored as PBKDF2 hashes with per-user salts.
+- Session tokens are random, stored as hashes, and delivered in HttpOnly, Secure, SameSite=Lax cookies.
+- Mutating API requests require a same-origin Origin header.
+- Login and registration attempts are rate-limited and old attempt records are pruned.
+- Uploaded images are size-limited, MIME-allowlisted, and checked against file signatures.
+- Media object keys are restricted to generated UUID paths.
+- Profile options are validated against server-side allowlists.
+
+## Development
+
+The Cloudflare Worker source is maintained in `worker.js`. Keep this file synchronized with the deployed Worker when making changes.
 
 ## Brand
 
