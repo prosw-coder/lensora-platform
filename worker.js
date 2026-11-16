@@ -636,6 +636,84 @@ async function authPassword(password,saltHex,iterations){const key=await crypto.
 function authEqual(a,b){if(typeof a!=="string"||typeof b!=="string"||a.length!==b.length)return false;let d=0;for(let i=0;i<a.length;i++)d|=a.charCodeAt(i)^b.charCodeAt(i);return d===0}
 function authJson(data,status=200,headers={}){return new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff",...headers}})}
 function authCookie(request,name){const raw=request.headers.get("Cookie")||"";for(const part of raw.split(";")){const i=part.indexOf("=");if(i>0&&part.slice(0,i).trim()===name)return part.slice(i+1).trim()}return ""}
+const PANEL_SESSION_SECONDS=4*60*60;
+function panelCookieName(role){return role==="admin"?"lensora_admin_panel":"lensora_staff_panel"}
+function panelSecretName(role){return role==="admin"?"LENSORA_ADMIN_PANEL_PASSWORD":"LENSORA_STAFF_PANEL_PASSWORD"}
+async function panelMac(value,secret){const key=await crypto.subtle.importKey("raw",authEncoder.encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);return authB64(new Uint8Array(await crypto.subtle.sign("HMAC",key,authEncoder.encode(value))))}
+async function panelSessionValid(request,env,role){
+ const secret=env?.LENSORA_PANEL_SESSION_KEY;if(!secret)return false;
+ const token=authCookie(request,panelCookieName(role));if(!token||token.length>500)return false;
+ const dot=token.lastIndexOf(".");if(dot<1)return false;
+ const payload=token.slice(0,dot),sig=token.slice(dot+1);
+ let decoded="";try{decoded=atob(payload.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-payload.length%4)%4))}catch{return false}
+ const parts=decoded.split("|");if(parts.length!==3||parts[0]!==role||!/^\d+$/.test(parts[1])||Number(parts[1])<=Math.floor(Date.now()/1000))return false;
+ return authEqual(sig,await panelMac(payload,secret));
+}
+async function panelSetCookie(role,env){
+ const payload=authB64(authEncoder.encode(role+"|"+(Math.floor(Date.now()/1000)+PANEL_SESSION_SECONDS)+"|"+authB64(crypto.getRandomValues(new Uint8Array(24)))));
+ const token=payload+"."+await panelMac(payload,env.LENSORA_PANEL_SESSION_KEY);
+ return panelCookieName(role)+"="+token+"; Path=/; Max-Age="+PANEL_SESSION_SECONDS+"; HttpOnly; Secure; SameSite=Strict";
+}
+function panelClearCookie(role){return panelCookieName(role)+"=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict"}
+async function panelRoleUser(request,env,role){
+ const user=await authCurrentUser(request,env);if(!user)return null;
+ const row=await env.DB.prepare("SELECT role FROM staff_members WHERE user_id=?").bind(user.id).first();
+ if(role==="admin")return row?.role==="owner"?user:null;
+ return row?user:null;
+}
+async function handlePanelAuth(request,env,url){
+ if(!url.pathname.startsWith("/api/panel-auth/"))return null;
+ if(!env?.DB)return authJson({error:"DATABASE_UNAVAILABLE"},503);
+ const m=url.pathname.match(/^\/api\/panel-auth\/(admin|staff)\/(login|me|logout)$/);if(!m)return authJson({error:"NOT_FOUND"},404);
+ const role=m[1],action=m[2],secret=env[panelSecretName(role)];
+ if(action==="me"&&request.method==="GET"){
+  const user=await panelRoleUser(request,env,role),valid=await panelSessionValid(request,env,role);
+  return authJson({authenticated:!!(user&&valid),reason:!user?"ACCOUNT_ROLE_REQUIRED":!valid?"PANEL_PASSWORD_REQUIRED":null});
+ }
+ if(action==="logout"&&request.method==="POST"){
+  const origin=request.headers.get("Origin");if(origin!==url.origin)return authJson({error:"CROSS_SITE_REQUEST"},403);
+  return authJson({ok:true},200,{"set-cookie":panelClearCookie(role)});
+ }
+ if(action!=="login"||request.method!=="POST")return authJson({error:"METHOD_NOT_ALLOWED"},405);
+ const origin=request.headers.get("Origin");if(origin!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403);
+ if(!secret||!env.LENSORA_PANEL_SESSION_KEY)return authJson({error:"PANEL_NOT_CONFIGURED"},503);
+ let body;try{body=await request.json()}catch{return authJson({error:"INVALID_JSON"},400)}
+ const password=String(body?.password||"");if(!password||password.length>256)return authJson({error:"INVALID_PASSWORD"},400);
+ const ipHash=await authHash(request.headers.get("CF-Connecting-IP")||"unknown"),identityHash=await authHash("panel:"+role);
+ if(await authRateLimited(env,ipHash,identityHash))return authJson({error:"TOO_MANY_ATTEMPTS"},429,{"retry-after":"900"});
+ const valid=authEqual(await authHash(password),await authHash(secret));
+ await authLogAttempt(env,ipHash,identityHash,valid);
+ if(!valid)return authJson({error:"INVALID_PASSWORD"},401);
+ const user=await panelRoleUser(request,env,role);
+ if(!user)return authJson({error:"ACCOUNT_ROLE_REQUIRED"},403);
+ return authJson({ok:true},200,{"set-cookie":await panelSetCookie(role,env)});
+}
+async function handleAdmin(request,env,url){
+ if(!url.pathname.startsWith("/api/admin/"))return null;
+ if(!env?.DB)return authJson({error:"DATABASE_UNAVAILABLE"},503);
+ if(request.method==="POST"){const origin=request.headers.get("Origin");if(origin!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403)}
+ const user=await panelRoleUser(request,env,"admin");
+ if(!user||!await panelSessionValid(request,env,"admin"))return authJson({error:"ADMIN_PANEL_REQUIRED"},403);
+ if(url.pathname==="/api/admin/overview"&&request.method==="GET"){
+  const stats=await env.DB.prepare("SELECT (SELECT COUNT(*) FROM users WHERE status='active') AS users,(SELECT COUNT(*) FROM staff_members) AS staff,(SELECT COUNT(*) FROM staff_messages WHERE status='new') AS new_messages,(SELECT COUNT(*) FROM competition_participants) AS participants,(SELECT COUNT(*) FROM competition_requests WHERE status='pending') AS pending_requests").first();
+  return authJson({stats});
+ }
+ if(url.pathname==="/api/admin/staff"&&request.method==="GET"){
+  const rows=await env.DB.prepare("SELECT u.id,u.first_name,u.last_name,u.username,u.email,s.role,s.created_at FROM staff_members s JOIN users u ON u.id=s.user_id ORDER BY CASE s.role WHEN 'owner' THEN 0 ELSE 1 END,s.created_at").all();
+  return authJson({staff:rows.results||[]});
+ }
+ if(url.pathname==="/api/admin/staff"&&request.method==="POST"){
+  let b;try{b=await request.json()}catch{return authJson({error:"INVALID_JSON"},400)}
+  const email=String(b.email||"").trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return authJson({error:"INVALID_EMAIL"},400);
+  const target=await env.DB.prepare("SELECT id FROM users WHERE email_norm=? AND status='active'").bind(email).first();
+  if(!target)return authJson({error:"USER_NOT_FOUND"},404);
+  await env.DB.prepare("INSERT OR IGNORE INTO staff_members (user_id,role,created_at) VALUES (?,'staff',?)").bind(target.id,new Date().toISOString()).run();
+  return authJson({ok:true});
+ }
+ return authJson({error:"NOT_FOUND"},404);
+}
+
 function authSetCookie(token){return "lensora_session="+token+"; Path=/; Max-Age="+AUTH_SESSION_SECONDS+"; HttpOnly; Secure; SameSite=Lax"}
 function authClearCookie(){return "lensora_session=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax"}
 function authSafeUser(row){return {id:row.id,firstName:row.first_name,lastName:row.last_name,username:row.username,email:row.email,createdAt:row.created_at,plan:row.plan==="pro"?"pro":"free"}}
@@ -966,4 +1044,4 @@ async function handleStaff(request,env,url){
  return authJson({error:"NOT_FOUND"},404);
 }
 
-export default {async fetch(request,env){const url=new URL(request.url);let pathname=url.pathname;try{pathname=decodeURIComponent(pathname)}catch(e){return new Response("Invalid URL",{status:400})}if(pathname.startsWith("/media/")){try{const response=await handleMedia(request,env,url);if(response)return response}catch(e){console.error("LENSORA_MEDIA_ERROR",e);return new Response("Media error",{status:500})}}if(pathname.startsWith("/api/portfolio/works")){try{const response=await handlePortfolio(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_PORTFOLIO_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/staff/")){try{const response=await handleStaff(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_STAFF_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/competitions")){try{const response=await handleCompetitions(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_COMPETITIONS_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/auth/")){try{const response=await handleAuth(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_AUTH_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname==="/api/profile-services"){try{const response=await handleCreatorServices(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_SERVICES_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/profile/")){try{const response=await handleProfile(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_PROFILE_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname==="/health")return new Response("LENSORA OK",{headers:{"content-type":"text/plain; charset=utf-8","cache-control":"no-store"}});if(pathname!=="/"&&pathname!=="/index.html"&&pathname!=="/competitions"&&pathname!=="/competitions/demo"&&pathname!=="/staff"&&!(pathname.startsWith("/@")&&pathname.slice(2).split("").every(c=>"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-".includes(c))))return new Response("Not found",{status:404});return new Response(PAGE,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"strict-origin-when-cross-origin","x-frame-options":"DENY","content-security-policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'","permissions-policy":"camera=(), microphone=(), geolocation=()"}})}};
+export default {async fetch(request,env){const url=new URL(request.url);let pathname=url.pathname;try{pathname=decodeURIComponent(pathname)}catch(e){return new Response("Invalid URL",{status:400})}if(pathname.startsWith("/media/")){try{const response=await handleMedia(request,env,url);if(response)return response}catch(e){console.error("LENSORA_MEDIA_ERROR",e);return new Response("Media error",{status:500})}}if(pathname.startsWith("/api/portfolio/works")){try{const response=await handlePortfolio(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_PORTFOLIO_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/panel-auth/")){try{const response=await handlePanelAuth(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_PANEL_AUTH_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/admin/")){try{const response=await handleAdmin(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_ADMIN_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/staff/")){try{const response=await handleStaff(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_STAFF_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/competitions")){try{const response=await handleCompetitions(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_COMPETITIONS_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/auth/")){try{const response=await handleAuth(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_AUTH_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname==="/api/profile-services"){try{const response=await handleCreatorServices(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_SERVICES_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/profile/")){try{const response=await handleProfile(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_PROFILE_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname==="/health")return new Response("LENSORA OK",{headers:{"content-type":"text/plain; charset=utf-8","cache-control":"no-store"}});if(pathname!=="/"&&pathname!=="/index.html"&&pathname!=="/competitions"&&pathname!=="/competitions/demo"&&pathname!=="/staff"&&pathname!=="/admin"&&!(pathname.startsWith("/@")&&pathname.slice(2).split("").every(c=>"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-".includes(c))))return new Response("Not found",{status:404});return new Response(PAGE,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"strict-origin-when-cross-origin","x-frame-options":"DENY","content-security-policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'","permissions-policy":"camera=(), microphone=(), geolocation=()"}})}};
