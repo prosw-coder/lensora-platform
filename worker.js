@@ -174,6 +174,45 @@ body:not(.competition-standalone) #competitions{display:none!important}.competit
 .competition-post-rule,.competition-post-vote-note{color:#b8a77f;font-size:12px}
 .competition-post-vote{margin-top:auto}
 @media(max-width:650px){.competition-post-grid{gap:8px}.competition-post-top{gap:6px;padding:8px}.competition-post-top img{width:29px;height:29px}.competition-post-top b{font-size:10px}.competition-post-bottom{padding:8px;font-size:10px}.competition-post-dialog{grid-template-columns:1fr;max-height:94vh}.competition-post-photo{min-height:0;height:min(55vh,520px)}.competition-post-photo img{max-height:55vh}.competition-post-details{padding:17px;gap:11px}.competition-post-vote{min-height:44px}}
+
+/* LENSORA motion tournament experience */
+.competition-motion{position:relative;isolation:isolate;overflow:hidden;margin:22px 0 26px;padding:clamp(20px,3vw,34px);border:1px solid #755b31;border-radius:18px;background:radial-gradient(ellipse at 8% 0%,#b68b3b26,transparent 38%),radial-gradient(ellipse at 90% 100%,#8c692a20,transparent 36%),linear-gradient(125deg,#171a14,#0a0c0a 72%);box-shadow:0 20px 70px #0007}
+.competition-motion:before,.competition-motion:after{content:"";position:absolute;z-index:-1;border:1px solid #c9a45e20;border-radius:50%;width:360px;height:360px;inset-inline-end:-160px;top:-220px;animation:compOrbit 22s linear infinite}
+.competition-motion:after{width:500px;height:500px;inset-inline-end:-230px;top:-300px;animation-duration:34s}
+@keyframes compOrbit{to{transform:rotate(360deg)}}
+.competition-motion-head{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.competition-motion-head small,.competition-qualifiers-head small{color:#c9a45e;font:700 10px "DM Sans";letter-spacing:2px}
+.competition-motion-head h2{font-size:clamp(22px,3vw,32px);margin:8px 0;color:#f1e8d6}
+.competition-motion-head h2 em{font-style:normal;color:#e0bd73}
+.competition-motion-head p,.competition-qualifiers-head p{margin:0;color:#aaa99e;font-size:12px;line-height:1.8}
+.competition-motion-prize{position:relative;flex:0 0 130px;padding:12px 16px;border:1px solid #9d7b42;background:#c9a45e0d;text-align:center;border-radius:12px}
+.competition-motion-prize span,.competition-motion-prize b{display:block}
+.competition-motion-prize span{font-size:10px;color:#b9aa88}.competition-motion-prize b{font:700 25px "DM Sans";color:#f0d18a}.competition-motion-prize small{font-size:11px}.competition-motion-prize i{position:absolute;top:-9px;inset-inline-end:-7px;color:#f0d18a;font-style:normal}
+.competition-flow-track{position:relative;display:flex;align-items:center;justify-content:space-between;gap:9px;margin:34px 0 20px;padding:0 4px}
+.competition-flow-line{position:absolute;top:19px;inset-inline:24px;height:1px;background:linear-gradient(90deg,#70552c,#e5c47c,#70552c);opacity:.7}
+.competition-flow-line span{display:block;width:28%;height:2px;background:#f4d58f;box-shadow:0 0 12px #f4d58f;animation:compFlow 4s ease-in-out infinite alternate}
+@keyframes compFlow{from{transform:translateX(0)}to{transform:translateX(230%)}}
+.competition-flow-step{position:relative;z-index:1;display:grid;justify-items:center;gap:6px;min-width:0;padding:0 2px;border:0;background:transparent;color:#aaa99e;cursor:pointer;transition:transform .25s,color .25s}
+.competition-flow-step i{display:grid;place-items:center;width:39px;height:39px;border:1px solid #80643a;border-radius:50%;background:#11140f;color:#d7b875;font:700 11px "DM Sans";font-style:normal;box-shadow:0 0 0 5px #10120f;transition:all .25s}
+.competition-flow-step b{font-size:11px;white-space:nowrap}.competition-flow-step small{font-size:9px;color:#898b81;white-space:nowrap}
+.competition-flow-step.active,.competition-flow-step:hover{color:#f2dfb6;transform:translateY(-3px)}
+.competition-flow-step.active i{background:linear-gradient(145deg,#f0d18a,#997238);color:#17130c;border-color:#f4d58f;box-shadow:0 0 0 5px #10120f,0 0 22px #d6b56f77}
+.competition-flow-info{display:flex;align-items:center;gap:14px;min-height:76px;padding:14px 16px;border:1px solid #ffffff17;border-radius:12px;background:#ffffff07}
+.competition-flow-orb{display:grid;place-items:center;flex:0 0 38px;height:38px;border-radius:50%;color:#1a160d;background:linear-gradient(145deg,#f0d18a,#a47b3b);box-shadow:0 0 22px #d6b56f44}
+.competition-flow-info>div{flex:1}.competition-flow-info b{color:#ead5a6;font-size:13px}.competition-flow-info p{margin:5px 0 0;color:#aaa99e;font-size:11px;line-height:1.8}
+.competition-flow-rule{white-space:nowrap;color:#d7bb7d;font-size:10px}.competition-flow-rule i{padding:0 5px;color:#78623c;font-style:normal}
+.competition-flow-foot{display:flex;align-items:center;gap:12px;margin-top:17px;color:#8e7954;font:700 9px "DM Sans";letter-spacing:2px}.competition-flow-dash{height:1px;flex:1;background:linear-gradient(90deg,#80643a55,#d6b56f,#80643a55)}
+.competition-qualifiers{min-width:0}.competition-qualifiers-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px}.competition-qualifiers-head h2{margin:5px 0;font-size:23px;color:#eee5d2}.competition-live-mark{display:flex;align-items:center;gap:7px;padding:8px 11px;border:1px solid #8d703d;border-radius:30px;color:#d9bd80;font:700 9px "DM Sans";letter-spacing:1px}.competition-live-mark i{width:7px;height:7px;border-radius:50%;background:#c9a45e;box-shadow:0 0 12px #c9a45e;animation:compPulse 1.5s infinite}
+@keyframes compPulse{50%{opacity:.35;transform:scale(.7)}}
+.competition-matches{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;align-items:stretch}
+.competition-match-card{min-width:0;padding:12px;border:1px solid #51452e;border-radius:13px;background:linear-gradient(145deg,#171a14,#0d0f0c);transition:transform .22s,border-color .22s,box-shadow .22s}
+.competition-match-card:hover{transform:translateY(-3px);border-color:#a9894d;box-shadow:0 12px 30px #0005}
+.competition-match-head{align-items:flex-start;flex-direction:column;gap:5px;margin-bottom:10px}.competition-match-head b{font-size:11px}.competition-match-head small{font-size:9px}
+.competition-post-grid{gap:8px}.competition-post-top{gap:6px;padding:7px}.competition-post-top img{width:27px;height:27px}.competition-post-top b{font-size:10px}.competition-post-top small{font-size:9px}.competition-post-bottom{padding:8px 7px;font-size:9px}
+.competition-match-card .competition-post-thumb{aspect-ratio:4/4.5}
+@media(max-width:700px){.competition-motion-head{align-items:flex-start}.competition-flow-track{overflow-x:auto;justify-content:flex-start;padding:0 3px 10px;scroll-snap-type:x mandatory}.competition-flow-step{flex:0 0 83px;scroll-snap-align:center}.competition-flow-line{inset-inline:20px;width:calc(100% - 40px);min-width:560px}.competition-flow-info{align-items:flex-start;flex-wrap:wrap}.competition-flow-rule{margin-inline-start:52px}.competition-matches{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:460px){.competition-motion{padding:17px 13px}.competition-motion-prize{flex-basis:95px;padding:9px}.competition-motion-prize b{font-size:20px}.competition-motion-head h2{font-size:21px}.competition-flow-step{flex-basis:76px}.competition-flow-step b{font-size:10px}.competition-flow-step small{font-size:8px}.competition-matches{grid-template-columns:1fr}.competition-qualifiers-head h2{font-size:19px}.competition-post-top b{font-size:11px}}
+
 </style>
 </head>
 <body>
@@ -230,10 +269,23 @@ body:not(.competition-standalone) #competitions{display:none!important}.competit
 <section class="section" id="competitions"><div class="container competition-shell">
 <a class="competition-back" href="/">← العودة إلى LENSORA</a>
 <div class="competition-cover"><div class="competition-cover-content"><small>LENSORA · OFFICIAL COMPETITION</small><p>NOVEMBER EDITION 2026</p><h1>أجمل صورة <em>بورتريه</em></h1><p>نافس المبدعين، وشارك أعمالك، ودع صورتك تتحدث.</p><div class="competition-cover-meta"><span><b>100</b> دينار جائزة</span><span><b>64</b> مقعداً</span><span><b>3</b> دنانير رسوم التسجيل</span></div></div><div class="competition-cover-mark">L</div></div>
+<section class="competition-motion" aria-label="آلية المسابقة">
+<div class="competition-motion-head"><div><small>LENSORA · THE TOURNAMENT FLOW</small><h2>من أول لقطة... إلى <em>منصة التتويج</em></h2><p>رحلة تنافسية مباشرة، وكل تصويت يقرّب مبدعاً من اللقب.</p></div><div class="competition-motion-prize"><span>الجائزة</span><b>100 <small>د.أ</small></b><i>✦</i></div></div>
+<div class="competition-flow-track">
+<div class="competition-flow-line"><span></span></div>
+<button class="competition-flow-step active" data-round="0"><i>01</i><b>التسجيل</b><small>64 مقعداً</small></button>
+<button class="competition-flow-step" data-round="1"><i>02</i><b>دور الـ64</b><small>32 مواجهة</small></button>
+<button class="competition-flow-step" data-round="2"><i>03</i><b>دور الـ32</b><small>16 مواجهة</small></button>
+<button class="competition-flow-step" data-round="3"><i>04</i><b>دور الـ16</b><small>8 مواجهات</small></button>
+<button class="competition-flow-step" data-round="4"><i>05</i><b>ربع النهائي</b><small>4 مواجهات</small></button>
+<button class="competition-flow-step" data-round="5"><i>06</i><b>نصف النهائي</b><small>مواجهتان</small></button>
+<button class="competition-flow-step" data-round="6"><i>07</i><b>النهائي</b><small>بطل واحد</small></button>
+</div>
+<div class="competition-flow-info"><span class="competition-flow-orb">✦</span><div><b id="competitionFlowTitle">بوابتك إلى المنافسة</b><p id="competitionFlowText">أرسل طلبك، وبعد تأكيد استلام رسوم المشاركة وتفعيل المقعد، تصبح ضمن الـ64 مبدعاً.</p></div><span class="competition-flow-rule">24 ساعة لكل مواجهة <i>·</i> كل صوت = 5 نقاط</span></div>
+<div class="competition-flow-foot"><span>64 CREATORS</span><span class="competition-flow-dash"></span><span>ONE CHAMPION</span></div>
+</section>
 <div class="competition-page-grid"><div class="competition-main-column">
-<div class="competition-card"><small>THE CHALLENGE</small><h2>عن المسابقة</h2><p>تحدٍ إبداعي يجمع أصحاب عدسات البورتريه في تصفيات إقصائية. يتنافس المشاركون في مواجهات ثنائية، ويتأهل صاحب الأصوات الأعلى حتى الوصول إلى النهائي.</p><div class="competition-rules-grid"><div><b>64</b><small>مشاركاً كحد أقصى</small></div><div><b>1 VS 1</b><small>مواجهات ثنائية</small></div><div><b>24 ساعة</b><small>مدة المواجهة</small></div><div><b>100 د.أ</b><small>قيمة الجائزة</small></div></div></div>
-<div class="competition-card"><small>TOURNAMENT ROAD</small><h2>مراحل المنافسة</h2><div class="competition-rounds"><div><b>64</b><span>دور الـ64</span></div><i></i><div><b>32</b><span>دور الـ32</span></div><i></i><div><b>16</b><span>دور الـ16</span></div><i></i><div><b>8</b><span>ربع النهائي</span></div><i></i><div><b>4</b><span>نصف النهائي</span></div><i></i><div><b>2</b><span>النهائي</span></div></div><p class="competition-muted">كل مواجهة 24 ساعة، وعند التعادل تُمدد ساعة إضافية وتتكرر التمديدات حتى يتقدم أحد المتنافسين.</p></div>
-<div class="competition-card"><small>QUALIFIERS</small><h2>المشاركون والمواجهات</h2><div id="compMatches" class="competition-matches"><div class="competition-empty">ستظهر المواجهات هنا عند بدء الجولات.</div></div><div id="compParticipants" class="competition-participants"></div></div>
+<div class="competition-card competition-qualifiers"><div class="competition-qualifiers-head"><div><small>LIVE ARENA</small><h2>ساحة المواجهات</h2><p>اختر الصورة التي تريد استكشافها، ثم شاهد تفاصيل المشاركة وصوّت.</p></div><div class="competition-live-mark"><i></i> ARENA</div></div><div id="compMatches" class="competition-matches"><div class="competition-empty">ستظهر المواجهات هنا عند بدء الجولات.</div></div><div id="compParticipants" class="competition-participants" hidden></div></div>
 </div><aside class="competition-side-column"><div class="competition-register-card"><small>JOIN THE CHALLENGE</small><h2>مكانك بين المبدعين</h2><div class="competition-seat-number"><b id="compCount">0</b><span>/ 64 مقعداً مفعّلاً</span></div><div class="competition-progress"><span id="compProgress"></span></div><div class="competition-prize"><span>الجائزة الكبرى</span><b>100 <small>د.أ</small></b></div><div class="competition-fee"><span>رسوم المشاركة</span><b>3 د.أ</b></div><div class="competition-note" id="compStatus">جارٍ تحميل تفاصيل المسابقة...</div><button class="btn competition-apply-btn" id="compApply">طلب المشاركة</button><p class="competition-terms">إرسال الطلب لا يحجز مقعداً. يتواصل فريق الدعم لترتيب الدفع، وبعد استلام الرسوم تفعّل الإدارة المشاركة. رسوم التسجيل غير مستردة بعد التسجيل.</p><button class="btn ghost" id="compAdminToggle" hidden>لوحة إدارة المسابقة</button><div id="compAdminPanel" hidden class="competition-admin"></div></div><div class="competition-card"><b>كيف تنضم؟</b><ol><li>أرسل طلب المشاركة.</li><li>يتواصل معك الدعم لترتيب دفع 3 دنانير.</li><li>بعد استلام الرسوم، يتم تفعيل مقعدك.</li></ol></div></aside></div></div></section>
 <section class="section" id="join"><div class="container banner"><div><div class="eyebrow" data-t="joinEyebrow">مساحتك الإبداعية تبدأ هنا</div><h2 data-t="joinTitle">اجعل أعمالك تتحدث عنك.</h2><p data-t="joinSub">أنشئ حضورك المهني واكتشف مجتمعاً يقدّر الإبداع البصري.</p></div><button class="btn" id="signupBottom" data-t="signup">إنشاء حساب ↗</button></div></section>
 </main>
@@ -475,7 +527,26 @@ function openCompetitionPost(data){
  vote.onclick=async()=>{if(!data.canVote||data.voted)return;if(!confirm("تأكيد التصويت؟ سيُضاف 5 نقاط لهذه المشاركة ولا يمكن تغيير صوتك."))return;vote.disabled=true;try{const api=location.pathname.endsWith("/demo")?"/api/competitions/demo":"/api/competitions";const response=await fetch(api+"/vote",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({matchId:data.matchId,participantId:data.participant})});const result=await response.json();if(!response.ok)throw new Error(result.error==="ALREADY_VOTED"?"لقد صوّت سابقاً في هذه المواجهة.":result.error||"تعذر تسجيل التصويت");modal.hidden=true;await loadCompetitionPanel()}catch(e){alert(e.message);vote.disabled=false}};
  modal.hidden=false;
 }
+function initCompetitionMotion(){
+ const stages=[
+  ["بوابتك إلى المنافسة","أرسل طلبك، وبعد تأكيد استلام رسوم المشاركة وتفعيل المقعد، تصبح ضمن الـ64 مبدعاً."],
+  ["انطلقت المواجهات","64 مشاركاً يتوزعون على 32 مواجهة ثنائية. صاحب الأصوات الأعلى ينتقل إلى الدور التالي."],
+  ["تشتد المنافسة","يتأهل 32 مبدعاً في 16 مواجهة، وتبدأ المنافسة بالاقتراب من اللقب."],
+  ["نصف الطريق إلى القمة","16 مبدعاً يتنافسون في 8 مواجهات حاسمة."],
+  ["مرحلة الحسم","8 مبدعين يتواجهون في 4 مواجهات للوصول إلى المربع الذهبي."],
+  ["المربع الذهبي","4 مبدعين في مواجهتين، والفائزان يبلغان النهائي."],
+  ["لقطة التتويج","مواجهة أخيرة تحدد بطل المسابقة والفائز بالجائزة الكبرى 100 دينار."]
+ ];
+ const track=document.querySelector(".competition-flow-track");if(!track||track.dataset.ready)return;track.dataset.ready="1";
+ track.querySelectorAll("[data-round]").forEach(btn=>btn.addEventListener("click",()=>{
+  const n=Math.max(0,Math.min(6,Number(btn.dataset.round)||0)),item=stages[n];
+  track.querySelectorAll("[data-round]").forEach(x=>x.classList.toggle("active",x===btn));
+  document.getElementById("competitionFlowTitle").textContent=item[0];
+  document.getElementById("competitionFlowText").textContent=item[1];
+ }));
+}
 async function loadCompetitionPanel(){
+ initCompetitionMotion();
  const note=document.getElementById("compStatus");if(!note)return;
  try{
   const apiBase=location.pathname.endsWith("/demo")?"/api/competitions/demo":"/api/competitions";
