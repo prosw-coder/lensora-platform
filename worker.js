@@ -460,14 +460,14 @@ async function handleProfile(request,env,url){
   const avatar=imageUrl(body.avatarUrl),cover=imageUrl(body.coverUrl);if(avatar==="INVALID"||cover==="INVALID")return authJson({error:"INVALID_IMAGE_URL"},400);
   const now=new Date().toISOString();
   await env.DB.prepare("INSERT INTO profiles (user_id,bio,specialty,city,experience,skills_json,languages_json,avatar_url,cover_url,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET bio=excluded.bio,specialty=excluded.specialty,city=excluded.city,experience=excluded.experience,skills_json=excluded.skills_json,languages_json=excluded.languages_json,avatar_url=excluded.avatar_url,cover_url=excluded.cover_url,updated_at=excluded.updated_at").bind(user.id,bio,specialty,city,experience,JSON.stringify(skills),JSON.stringify(languages),avatar,cover,now).run();
-  const row=await env.DB.prepare("SELECT u.first_name,u.last_name,u.username,p.bio,p.specialty,p.city,p.experience,p.skills_json,p.languages_json,p.avatar_url,p.cover_url,p.updated_at AS profile_updated_at FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.id=?").bind(user.id).first();return authJson({ok:true,profile:profileSafe(row,true)})
+  const row=await env.DB.prepare("SELECT u.first_name,u.last_name,u.username,u.plan,p.bio,p.specialty,p.city,p.experience,p.skills_json,p.languages_json,p.avatar_url,p.cover_url,p.updated_at AS profile_updated_at FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.id=?").bind(user.id).first();return authJson({ok:true,profile:profileSafe(row,true)})
  }
  if(request.method!=="GET")return authJson({error:"METHOD_NOT_ALLOWED"},405);
  const username=decodeURIComponent(url.pathname.slice("/api/profile/".length)).replace(/^@/,"").toLowerCase();if(!/^[a-z0-9._-]{3,24}$/.test(username))return authJson({error:"INVALID_USERNAME"},400);
  const row=await env.DB.prepare("SELECT u.id,u.first_name,u.last_name,u.username,u.status,u.plan,p.bio,p.specialty,p.city,p.experience,p.skills_json,p.languages_json,p.avatar_url,p.cover_url,p.updated_at AS profile_updated_at FROM users u LEFT JOIN profiles p ON p.user_id=u.id WHERE u.username_norm=? AND u.status='active' LIMIT 1").bind(username).first();
  if(!row)return authJson({error:"PROFILE_NOT_FOUND"},404);
  if(!row.skills_json)await env.DB.prepare("INSERT OR IGNORE INTO profiles (user_id,updated_at) VALUES (?,?)").bind(row.id,new Date().toISOString()).run();
- const full=row.skills_json?row:await env.DB.prepare("SELECT u.first_name,u.last_name,u.username,p.bio,p.specialty,p.city,p.experience,p.skills_json,p.languages_json,p.avatar_url,p.cover_url,p.updated_at AS profile_updated_at FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.id=?").bind(row.id).first();
+ const full=row.skills_json?row:await env.DB.prepare("SELECT u.first_name,u.last_name,u.username,u.plan,p.bio,p.specialty,p.city,p.experience,p.skills_json,p.languages_json,p.avatar_url,p.cover_url,p.updated_at AS profile_updated_at FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.id=?").bind(row.id).first();
  const viewer=await authCurrentUser(request,env);return authJson({profile:profileSafe(full,!!viewer&&viewer.id===row.id)})
 }
 
@@ -496,7 +496,7 @@ async function handlePortfolio(request,env,url){
   if(Number(count?.n||0)>=limit)return authJson({error:"PLAN_LIMIT_REACHED",limit},409);
   const id=authUuid(),key="portfolio/"+owner.id+"/"+id+"."+extensions[mime],now=new Date().toISOString();
   await env.MEDIA.put(key,bytes,{httpMetadata:{contentType:mime,cacheControl:"public, max-age=31536000, immutable"}});
-  try{await env.DB.prepare("INSERT INTO profile_works (id,user_id,object_key,mime_type,file_size,created_at) VALUES (?,?,?,?,?,?)").bind(id,owner.id,key,mime,bytes.byteLength,now).run()}catch(e){await env.MEDIA.delete(key);throw e}
+  try{const inserted=await env.DB.prepare("INSERT INTO profile_works (id,user_id,object_key,mime_type,file_size,created_at) SELECT ?,?,?,?,?,? WHERE (SELECT COUNT(*) FROM profile_works WHERE user_id=?) < ?").bind(id,owner.id,key,mime,bytes.byteLength,now,owner.id,limit).run();if(!inserted.meta?.changes){await env.MEDIA.delete(key);return authJson({error:"PLAN_LIMIT_REACHED",limit},409)}}catch(e){await env.MEDIA.delete(key);throw e}
   return authJson({ok:true,id,url:"/media/"+encodeURIComponent(key),count:Number(count?.n||0)+1,limit},201);
  }
  const match=url.pathname.match(/^\/api\/portfolio\/works\/([a-f0-9-]{36})$/i);
