@@ -412,38 +412,62 @@ document.addEventListener("contextmenu",e=>{if(e.target.closest(".work,.lightbox
 try{let savedLang=localStorage.getItem("lensora-language");if(savedLang==="en")lang="en";if(localStorage.getItem("lensora-theme")==="light")document.body.classList.add("light")}catch(e){}
 setLanguage(lang);renderCreators();renderServices();let currentPath=location.pathname;try{currentPath=decodeURIComponent(currentPath)}catch(e){}const profileMatch=currentPath.match(/^\/@([^/]+)$/);if(profileMatch){const creator=creators.find(c=>c.user.replace(/^@/,"").toLowerCase()===profileMatch[1].toLowerCase());if(creator)renderProfilePage(creator.id);else renderMemberProfile(profileMatch[1])}
 
-if(location.pathname==="/competitions"){document.body.classList.add("competition-standalone");document.title="مسابقة أجمل صورة بورتريه | LENSORA";}
+if(location.pathname.startsWith("/competitions")){document.body.classList.add("competition-standalone");document.title="مسابقة LENSORA | LENSORA";}
 function compEscape(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'" :'&#39;'}[c]))}
 async function loadCompetitionPanel(){
  const note=document.getElementById("compStatus");if(!note)return;
  try{
-  const res=await fetch("/api/competitions/public",{credentials:"same-origin"}),data=await res.json();
+  const apiBase=location.pathname.endsWith("/demo")?"/api/competitions/demo":"/api/competitions";
+  const res=await fetch(apiBase+"/public",{credentials:"same-origin"}),data=await res.json();
   if(!res.ok)throw new Error(data.error||"تعذر تحميل المسابقة");
   document.getElementById("compCount").textContent=String(data.counts?.participants||0);const progress=document.getElementById("compProgress");if(progress)progress.style.width=Math.min(100,(Number(data.counts?.participants||0)/64)*100)+"%";
   note.textContent=data.competition.status==="registration"?"التسجيل مفتوح. المقاعد لا تُحجز إلا بعد استلام الرسوم وتفعيل الإدارة.":data.competition.status==="active"?"المسابقة جارية. تابع المواجهات والتصفيات هنا.":data.competition.status==="completed"?"انتهت المسابقة.":"المسابقة قيد التجهيز وسيُعلن فتح التسجيل قريباً.";
   document.getElementById("compApply").disabled=data.competition.status!=="registration";
   document.getElementById("compApply").textContent=data.competition.status==="registration"?"طلب المشاركة":"التسجيل غير متاح حالياً";
+  const titleNode=document.querySelector(".competition-cover h1");if(titleNode&&data.competition?.title)titleNode.textContent=data.competition.title;
+  const descNode=document.querySelector(".competition-cover p");if(descNode&&data.competition?.description)descNode.textContent=data.competition.description;
   const participants=document.getElementById("compParticipants");
   participants.innerHTML=(data.participants||[]).map(p=>'<span class="competition-participant">#'+Number(p.seed)+' · '+compEscape(p.first_name+' '+p.last_name)+'</span>').join("");
-  const adminButton=document.getElementById("compAdminToggle");adminButton.hidden=!data.isAdmin;
-  if(data.isAdmin)adminButton.onclick=async()=>{const panel=document.getElementById("compAdminPanel");panel.hidden=!panel.hidden;if(!panel.hidden)await loadCompetitionAdmin()};
+  const adminButton=document.getElementById("compAdminToggle");adminButton.hidden=!data.isStaff;
+  if(data.isStaff)adminButton.onclick=async()=>{const panel=document.getElementById("compAdminPanel");panel.hidden=!panel.hidden;if(!panel.hidden){await loadCompetitionAdmin();await loadStaffInbox()}};
  }catch(e){note.textContent="تعذر تحميل بيانات المسابقة حالياً."}
 }
 async function loadCompetitionAdmin(){
  const panel=document.getElementById("compAdminPanel");panel.innerHTML="<p>جارٍ تحميل الطلبات...</p>";
  try{
-  const res=await fetch("/api/competitions/admin/requests",{credentials:"same-origin"}),data=await res.json();if(!res.ok)throw new Error(data.error||"تعذر التحميل");
+  const res=await fetch((location.pathname.endsWith("/demo")?"/api/competitions/demo":"/api/competitions")+"/admin/requests",{credentials:"same-origin"}),data=await res.json();if(!res.ok)throw new Error(data.error||"تعذر التحميل");
   panel.innerHTML='<h3>طلبات التسجيل · '+data.participantCount+' / 64</h3>'+(data.requests||[]).map(r=>'<div class="competition-request"><div><b>'+compEscape(r.first_name+' '+r.last_name)+' (@'+compEscape(r.username)+')</b><small>'+compEscape(r.email)+' · '+compEscape(r.status)+' · '+Number(r.fee_jod).toFixed(2)+' د.أ</small></div><div><a class="btn ghost small" href="mailto:'+encodeURIComponent(r.email)+'?subject='+encodeURIComponent('طلب المشاركة في مسابقة LENSORA')+'">مراسلة بالبريد</a> '+(r.status==="pending"?'<button class="btn small" data-activate="'+r.id+'">تفعيل بعد استلام الرسوم</button>':"")+'</div></div>').join("")||"<p>لا توجد طلبات حتى الآن.</p>";
-  panel.querySelectorAll("[data-activate]").forEach(btn=>btn.addEventListener("click",async()=>{if(!confirm("تأكيد استلام الرسوم فعلياً وتفعيل هذه المشاركة؟"))return;btn.disabled=true;try{const a=await fetch("/api/competitions/admin/activate",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({requestId:btn.dataset.activate})});const j=await a.json();if(!a.ok)throw new Error(j.error||"تعذر التفعيل");await loadCompetitionPanel();await loadCompetitionAdmin()}catch(e){alert("لم يتم التفعيل: "+e.message);btn.disabled=false}}));
+  panel.querySelectorAll("[data-activate]").forEach(btn=>btn.addEventListener("click",async()=>{if(!confirm("تأكيد استلام الرسوم فعلياً وتفعيل هذه المشاركة؟"))return;btn.disabled=true;try{const a=await fetch((location.pathname.endsWith("/demo")?"/api/competitions/demo":"/api/competitions")+"/admin/activate",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({requestId:btn.dataset.activate})});const j=await a.json();if(!a.ok)throw new Error(j.error||"تعذر التفعيل");await loadCompetitionPanel();await loadCompetitionAdmin()}catch(e){alert("لم يتم التفعيل: "+e.message);btn.disabled=false}}));
  }catch(e){panel.innerHTML="<p>تعذر تحميل لوحة الإدارة.</p>"}
 }
-document.getElementById("compApply")?.addEventListener("click",async()=>{
- if(!confirm("رسوم المشاركة 3 دنانير أردنية. لن يتم حجز مقعد بمجرد إرسال الطلب. بعد التسجيل لا يمكن استرداد الرسوم. هل توافق على هذه الشروط وترغب بإرسال الطلب؟"))return;
- const btn=document.getElementById("compApply");btn.disabled=true;
- try{const res=await fetch("/api/competitions/requests",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({acceptNonRefundable:true})});const data=await res.json();if(!res.ok)throw new Error(data.error==="AUTH_REQUIRED"?"سجّل الدخول أولاً ثم أرسل طلب المشاركة.":data.error==="REQUEST_ALREADY_EXISTS"?"لديك طلب مشاركة مسجل مسبقاً.":data.error||"تعذر إرسال الطلب");alert(data.message||"تم إرسال طلبك بنجاح.");}
- catch(e){alert(e.message)}finally{btn.disabled=false}
-});
+
+function openCompetitionRequest(){
+ const m=document.createElement("div");m.style.cssText="position:fixed;inset:0;z-index:9999;background:#000d;display:grid;place-items:center;padding:16px";
+ m.innerHTML='<section style="width:min(520px,100%);background:#151711;border:1px solid #c9a45e;border-radius:14px;padding:22px;color:#fff"><button id="rqX" style="float:left;background:none;border:0;color:#e5cc91;font-size:24px">×</button><h2>طلب المشاركة</h2><p id="rqIdentity">جارٍ التعرف على حسابك...</p><label>كيف تريد أن نتواصل معك؟</label><select id="rqMethod" style="width:100%;padding:12px;background:#222;color:#fff"><option value="email">Gmail / البريد المسجل</option><option value="whatsapp">واتساب</option></select><input id="rqPhone" placeholder="رقم واتساب مع رمز الدولة" style="display:none;width:100%;padding:12px;margin-top:10px;background:#222;color:#fff"><textarea id="rqNote" placeholder="رسالة إضافية (اختياري)" style="width:100%;padding:12px;margin-top:10px;background:#222;color:#fff"></textarea><p style="font-size:12px;color:#d6c28e">رسوم المشاركة 3 دنانير وغير مستردة بعد التسجيل. إرسال الطلب لا يؤكد المقعد؛ الموظف يتواصل معك وبعد تأكيد الدفع يعتمد المشاركة.</p><button id="rqSend" class="btn" style="width:100%">إرسال الطلب</button><p id="rqFeedback"></p></section>';document.body.appendChild(m);
+ const q=id=>m.querySelector("#"+id);q("rqX").onclick=()=>m.remove();q("rqMethod").onchange=()=>q("rqPhone").style.display=q("rqMethod").value==="whatsapp"?"block":"none";
+ fetch("/api/auth/me",{credentials:"same-origin"}).then(r=>r.json()).then(d=>{if(!d.authenticated){q("rqFeedback").textContent="يرجى تسجيل الدخول أولاً.";q("rqSend").disabled=true}else q("rqIdentity").textContent=d.user.firstName+" "+d.user.lastName+" · @"+d.user.username+" · "+d.user.email}).catch(()=>q("rqFeedback").textContent="تعذر التحقق من الحساب.");
+ q("rqSend").onclick=async()=>{q("rqSend").disabled=true;try{const api=location.pathname.endsWith("/demo")?"/api/competitions/demo":"/api/competitions";const r=await fetch(api+"/requests",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({acceptNonRefundable:true,contactMethod:q("rqMethod").value,phone:q("rqPhone").value,message:q("rqNote").value})});const d=await r.json();if(!r.ok)throw new Error(d.error==="AUTH_REQUIRED"?"سجّل الدخول أولاً.":d.error==="CONTACT_REQUIRED"?"أدخل رقم واتساب أو اختر البريد.":d.error||"تعذر إرسال الطلب");q("rqFeedback").textContent=d.message||"تم إرسال طلبك للموظفين.";q("rqSend").textContent="تم الإرسال";setTimeout(()=>m.remove(),1800)}catch(e){q("rqFeedback").textContent=e.message;q("rqSend").disabled=false}};
+}
+async function loadStaffInbox(){
+ const p=document.getElementById("compAdminPanel");if(!p)return;
+ try{const r=await fetch("/api/staff/messages",{credentials:"same-origin"}),d=await r.json();if(!r.ok)throw new Error(d.error||"تعذر تحميل الرسائل");
+ p.insertAdjacentHTML("beforeend",'<section id="staffInbox" style="margin-top:20px;border-top:1px solid #66512b;padding-top:15px"><h3>صندوق رسائل الموظفين</h3><div id="staffRows"></div><h4>إضافة موظف</h4><input id="staffEmail" placeholder="البريد المسجل للموظف" style="padding:10px;background:#222;color:#fff"><button id="staffAdd" class="btn small">إضافة</button><p id="staffFeedback"></p></section>');
+ const rows=p.querySelector("#staffRows");const cats=[["complaint","الشكاوى"],["suggestion","الاقتراحات"],["competition","المسابقات"]];
+ rows.innerHTML=cats.map(([cat,label])=>'<h4>'+label+'</h4>'+(d.messages||[]).filter(x=>x.category===cat).map(x=>'<article style="padding:12px;margin:8px 0;background:#20231c;border:1px solid #51452c;border-radius:8px"><b>'+compEscape(x.subject||label)+'</b><p>'+compEscape(x.body)+'</p><small>'+compEscape(x.first_name+" "+x.last_name)+' · '+compEscape(x.email)+' · '+compEscape(x.status)+'</small><p><a style="color:#e5cc91" target="_blank" rel="noopener" href="'+(x.contact_method==="whatsapp"?"https://wa.me/"+encodeURIComponent(x.contact_value.replace(/[^\d]/g,"")):"mailto:"+encodeURIComponent(x.contact_value))+'">التواصل عبر '+(x.contact_method==="whatsapp"?"واتساب":"Gmail")+' · '+compEscape(x.contact_value)+'</a></p><button class="btn ghost small" data-msg="'+x.id+'">إغلاق الرسالة</button></article>').join("")||"<p>لا توجد رسائل.</p>").join("");
+ p.querySelectorAll("[data-msg]").forEach(b=>b.onclick=async()=>{await fetch("/api/staff/messages/status",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({messageId:b.dataset.msg,status:"resolved"})});await loadStaffInbox()});
+ p.querySelector("#staffAdd").onclick=async()=>{const x=await fetch("/api/staff/members",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({email:p.querySelector("#staffEmail").value})});const j=await x.json();p.querySelector("#staffFeedback").textContent=x.ok?"تمت إضافة الموظف.":(j.error||"تعذر الإضافة")};
+ }catch(e){p.insertAdjacentHTML("beforeend",'<p>'+compEscape(e.message)+'</p>')}
+}
+function openSupportMessage(){
+ const m=document.createElement("div");m.style.cssText="position:fixed;inset:0;z-index:9998;background:#000d;display:grid;place-items:center;padding:16px";
+ m.innerHTML='<section style="width:min(500px,100%);background:#151711;border:1px solid #c9a45e;border-radius:14px;padding:22px;color:#fff"><button id="sx" style="float:left;background:none;border:0;color:#e5cc91">×</button><h2>تواصل مع فريق LENSORA</h2><select id="sc" style="width:100%;padding:12px;background:#222;color:#fff"><option value="complaint">شكوى</option><option value="suggestion">اقتراح</option><option value="competition">استفسار عن المسابقات</option></select><textarea id="sb" rows="5" placeholder="اكتب رسالتك..." style="width:100%;margin-top:12px;padding:12px;background:#222;color:#fff"></textarea><select id="sm" style="width:100%;margin-top:10px;padding:12px;background:#222;color:#fff"><option value="email">Gmail / البريد المسجل</option><option value="whatsapp">واتساب</option></select><input id="sp" placeholder="رقم واتساب مع رمز الدولة" style="display:none;width:100%;margin-top:10px;padding:12px;background:#222;color:#fff"><button id="ss" class="btn" style="width:100%;margin-top:12px">إرسال للموظفين</button><p id="sf"></p></section>';document.body.appendChild(m);
+ m.querySelector("#sx").onclick=()=>m.remove();m.querySelector("#sm").onchange=e=>m.querySelector("#sp").style.display=e.target.value==="whatsapp"?"block":"none";
+ m.querySelector("#ss").onclick=async()=>{const f=m.querySelector("#sf"),method=m.querySelector("#sm").value;try{const r=await fetch("/api/staff/messages",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({category:m.querySelector("#sc").value,body:m.querySelector("#sb").value,contactMethod:method,phone:m.querySelector("#sp").value})});const d=await r.json();if(!r.ok)throw new Error(d.error==="AUTH_REQUIRED"?"سجّل الدخول أولاً.":d.error||"تعذر الإرسال");f.textContent="وصلت رسالتك إلى فريق الموظفين.";m.querySelector("#ss").disabled=true}catch(e){f.textContent=e.message}};
+}
+
+document.getElementById("compApply")?.addEventListener("click",openCompetitionRequest);
 loadCompetitionPanel();
+const support=document.createElement("button");support.textContent="تواصل مع الموظفين";support.style.cssText="position:fixed;bottom:18px;inset-inline-start:18px;z-index:50;background:#c9a45e;color:#17140d;border:0;border-radius:30px;padding:12px 18px;font-weight:800;box-shadow:0 5px 22px #0008";support.onclick=openSupportMessage;document.body.appendChild(support);
 </script>
 </body></html>`;
 
@@ -648,33 +672,41 @@ async function handleMedia(request,env,url){
 async function handleCompetitions(request,env,url){
  if(!url.pathname.startsWith("/api/competitions"))return null;
  if(!env?.DB)return authJson({error:"DATABASE_UNAVAILABLE"},503);
- const competitionId="portrait-nov-2026";
+ const competitionId=url.pathname.startsWith("/api/competitions/demo/")?"portrait-demo-2026":"portrait-nov-2026";
  const user=await authCurrentUser(request,env);
  const isAdmin=async()=>!!user&&!!(await env.DB.prepare("SELECT 1 AS ok FROM competition_admins WHERE user_id=?").bind(user.id).first());
+ const isStaff=async()=>!!user&&!!(await env.DB.prepare("SELECT 1 AS ok FROM staff_members WHERE user_id=?").bind(user.id).first());
  if(url.pathname==="/api/competitions/public"&&request.method==="GET"){
   const c=await env.DB.prepare("SELECT id,title,description,entry_fee_jod,prize_jod,max_participants,status,start_at FROM competitions WHERE id=?").bind(competitionId).first();
   if(!c)return authJson({error:"COMPETITION_NOT_FOUND"},404);
   const counts=await env.DB.prepare("SELECT (SELECT COUNT(*) FROM competition_participants WHERE competition_id=?) AS participants,(SELECT COUNT(*) FROM competition_requests WHERE competition_id=? AND status='pending') AS pending").bind(competitionId,competitionId).first();
-  const participants=await env.DB.prepare("SELECT cp.seed,u.username,u.first_name,u.last_name,p.avatar_url FROM competition_participants cp JOIN users u ON u.id=cp.user_id LEFT JOIN profiles p ON p.user_id=u.id WHERE cp.competition_id=? ORDER BY cp.seed").bind(competitionId).all();
+  const visible=c.status==="active"||c.status==="completed";
+  const participants=visible?await env.DB.prepare("SELECT cp.seed,u.username,u.first_name,u.last_name,p.avatar_url FROM competition_participants cp JOIN users u ON u.id=cp.user_id LEFT JOIN profiles p ON p.user_id=u.id WHERE cp.competition_id=? ORDER BY cp.seed").bind(competitionId).all():{results:[]};
   const matches=await env.DB.prepare("SELECT m.id,m.round,m.match_number,m.starts_at,m.ends_at,m.extension_count,m.status,m.winner_id,pa.username AS a_username,pa.first_name AS a_first_name,pa.last_name AS a_last_name,pb.username AS b_username,pb.first_name AS b_first_name,pb.last_name AS b_last_name,(SELECT COUNT(*) FROM competition_votes v WHERE v.match_id=m.id AND v.participant_id=m.participant_a) AS votes_a,(SELECT COUNT(*) FROM competition_votes v WHERE v.match_id=m.id AND v.participant_id=m.participant_b) AS votes_b FROM competition_matches m LEFT JOIN competition_participants ca ON ca.id=m.participant_a LEFT JOIN users pa ON pa.id=ca.user_id LEFT JOIN competition_participants cb ON cb.id=m.participant_b LEFT JOIN users pb ON pb.id=cb.user_id WHERE m.competition_id=? ORDER BY m.round DESC,m.match_number").bind(competitionId).all();
-  return authJson({competition:c,counts,participants:participants.results||[],matches:matches.results||[],isAdmin:await isAdmin(),user:user?{id:user.id,username:user.username}:null});
+  return authJson({competition:c,counts:{...counts,participants:visible?Number(counts?.participants||0):0},participants:participants.results||[],matches:visible?(matches.results||[]):[],isAdmin:await isAdmin(),isStaff:await isStaff(),user:user?{id:user.id,username:user.username}:null});
  }
  if(url.pathname==="/api/competitions/requests"&&request.method==="POST"){
   if(!user)return authJson({error:"AUTH_REQUIRED"},401);
   const origin=request.headers.get("Origin");if(origin!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403);
   let body;try{body=await request.json()}catch{return authJson({error:"INVALID_JSON"},400)}
   if(body?.acceptNonRefundable!==true)return authJson({error:"REFUND_POLICY_REQUIRED"},400);
+  const contactMethod=body.contactMethod==="whatsapp"?"whatsapp":body.contactMethod==="email"?"email":"";
+  const contactValue=contactMethod==="whatsapp"?String(body.phone||"").trim().slice(0,32):String(user.email||"").trim();
+  if(!contactMethod||!contactValue)return authJson({error:"CONTACT_REQUIRED"},400);
   const c=await env.DB.prepare("SELECT status,entry_fee_jod FROM competitions WHERE id=?").bind(competitionId).first();
   if(!c||c.status!=="registration")return authJson({error:"REGISTRATION_CLOSED"},409);
   const existing=await env.DB.prepare("SELECT status FROM competition_requests WHERE competition_id=? AND user_id=?").bind(competitionId,user.id).first();
   if(existing)return authJson({error:"REQUEST_ALREADY_EXISTS",status:existing.status},409);
-  const id=authUuid(),now=new Date().toISOString();
-  await env.DB.prepare("INSERT INTO competition_requests (id,competition_id,user_id,status,fee_jod,note,created_at,updated_at) VALUES (?,?,?,'pending',?,'',?,?)").bind(id,competitionId,user.id,c.entry_fee_jod,now,now).run();
-  return authJson({ok:true,requestId:id,message:"تم استلام طلبك. الطلب لا يحجز مقعداً؛ سيتواصل معك فريق الدعم لترتيب الدفع."},201);
+  const id=authUuid(),messageId=authUuid(),now=new Date().toISOString();
+  await env.DB.batch([
+   env.DB.prepare("INSERT INTO staff_messages (id,user_id,category,subject,body,contact_method,contact_value,competition_id,status,created_at,updated_at) VALUES (?,?, 'competition',?,?,?,?,?,'new',?,?)").bind(messageId,user.id,"طلب مشاركة في "+(c.title||"المسابقة"),String(body.message||"يرجى التواصل معي بخصوص المشاركة.").slice(0,2000),contactMethod,contactValue,competitionId,now,now),
+   env.DB.prepare("INSERT INTO competition_requests (id,competition_id,user_id,status,fee_jod,note,created_at,updated_at,contact_method,contact_value,message_id) VALUES (?,?,?,'pending',?,'',?,?,?,?,?)").bind(id,competitionId,user.id,c.entry_fee_jod,now,now,contactMethod,contactValue,messageId)
+  ]);
+  return authJson({ok:true,requestId:id,messageId,message:"تم استلام طلبك. سيتواصل معك فريق LENSORA عبر الطريقة التي اخترتها لترتيب الدفع."},201);
  }
  if(url.pathname==="/api/competitions/admin/requests"&&request.method==="GET"){
-  if(!await isAdmin())return authJson({error:"ADMIN_REQUIRED"},403);
-  const rows=await env.DB.prepare("SELECT r.id,r.status,r.fee_jod,r.created_at,u.id AS user_id,u.username,u.first_name,u.last_name,u.email FROM competition_requests r JOIN users u ON u.id=r.user_id WHERE r.competition_id=? ORDER BY CASE r.status WHEN 'pending' THEN 0 ELSE 1 END,r.created_at").bind(competitionId).all();
+  if(!await isStaff())return authJson({error:"STAFF_REQUIRED"},403);
+  const rows=await env.DB.prepare("SELECT r.id,r.status,r.fee_jod,r.created_at,r.contact_method,r.contact_value,u.id AS user_id,u.username,u.first_name,u.last_name,u.email FROM competition_requests r JOIN users u ON u.id=r.user_id WHERE r.competition_id=? ORDER BY CASE r.status WHEN 'pending' THEN 0 ELSE 1 END,r.created_at").bind(competitionId).all();
   const c=await env.DB.prepare("SELECT COUNT(*) AS n FROM competition_participants WHERE competition_id=?").bind(competitionId).first();
   return authJson({requests:rows.results||[],participantCount:Number(c?.n||0),capacity:64});
  }
@@ -699,4 +731,48 @@ async function handleCompetitions(request,env,url){
  return authJson({error:"NOT_FOUND"},404);
 }
 
-export default {async fetch(request,env){const url=new URL(request.url);let pathname=url.pathname;try{pathname=decodeURIComponent(pathname)}catch(e){return new Response("Invalid URL",{status:400})}if(pathname.startsWith("/media/")){try{const response=await handleMedia(request,env,url);if(response)return response}catch(e){console.error("LENSORA_MEDIA_ERROR",e);return new Response("Media error",{status:500})}}if(pathname.startsWith("/api/portfolio/works")){try{const response=await handlePortfolio(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_PORTFOLIO_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/competitions")){try{const response=await handleCompetitions(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_COMPETITIONS_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/auth/")){try{const response=await handleAuth(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_AUTH_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname==="/api/profile-services"){try{const response=await handleCreatorServices(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_SERVICES_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/profile/")){try{const response=await handleProfile(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_PROFILE_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname==="/health")return new Response("LENSORA OK",{headers:{"content-type":"text/plain; charset=utf-8","cache-control":"no-store"}});if(pathname!=="/"&&pathname!=="/index.html"&&pathname!=="/competitions"&&!(pathname.startsWith("/@")&&pathname.slice(2).split("").every(c=>"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-".includes(c))))return new Response("Not found",{status:404});return new Response(PAGE,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"strict-origin-when-cross-origin","x-frame-options":"DENY","content-security-policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'","permissions-policy":"camera=(), microphone=(), geolocation=()"}})}};
+
+async function handleStaff(request,env,url){
+ if(!url.pathname.startsWith("/api/staff/"))return null;
+ if(!env?.DB)return authJson({error:"DATABASE_UNAVAILABLE"},503);
+ const user=await authCurrentUser(request,env);
+ const member=user?await env.DB.prepare("SELECT role FROM staff_members WHERE user_id=?").bind(user.id).first():null;
+ const staffOk=!!member,owner=member?.role==="owner";
+ if(request.method==="POST"){const origin=request.headers.get("Origin");if(origin!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403)}
+ if(url.pathname==="/api/staff/messages"&&request.method==="POST"){
+  if(!user)return authJson({error:"AUTH_REQUIRED"},401);
+  let b;try{b=await request.json()}catch{return authJson({error:"INVALID_JSON"},400)}
+  const category=["complaint","suggestion","competition"].includes(b.category)?b.category:"";
+  const body=String(b.body||"").trim().slice(0,3000),method=b.contactMethod==="whatsapp"?"whatsapp":b.contactMethod==="email"?"email":"";
+  const contact=method==="whatsapp"?String(b.phone||"").trim().slice(0,32):String(user.email||"");
+  if(!category||body.length<3||!method||!contact)return authJson({error:"INVALID_MESSAGE"},400);
+  const id=authUuid(),now=new Date().toISOString();
+  await env.DB.prepare("INSERT INTO staff_messages (id,user_id,category,subject,body,contact_method,contact_value,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,'new',?,?)").bind(id,user.id,category,category==="complaint"?"شكوى":category==="suggestion"?"اقتراح":"استفسار عن المسابقات",body,method,contact,now,now).run();
+  return authJson({ok:true,id,message:"تم إرسال رسالتك إلى فريق الموظفين."},201);
+ }
+ if(url.pathname==="/api/staff/messages"&&request.method==="GET"){
+  if(!staffOk)return authJson({error:"STAFF_REQUIRED"},403);
+  const rows=await env.DB.prepare("SELECT m.id,m.category,m.subject,m.body,m.contact_method,m.contact_value,m.competition_id,m.status,m.staff_note,m.created_at,u.username,u.first_name,u.last_name,u.email FROM staff_messages m JOIN users u ON u.id=m.user_id ORDER BY CASE m.status WHEN 'new' THEN 0 WHEN 'contacted' THEN 1 ELSE 2 END,m.created_at DESC LIMIT 250").all();
+  return authJson({messages:rows.results||[],role:member.role});
+ }
+ if(url.pathname==="/api/staff/messages/status"&&request.method==="POST"){
+  if(!staffOk)return authJson({error:"STAFF_REQUIRED"},403);
+  let b;try{b=await request.json()}catch{return authJson({error:"INVALID_JSON"},400)}
+  const status=["new","contacted","resolved"].includes(b.status)?b.status:"";
+  if(!status||!b.messageId)return authJson({error:"INVALID_INPUT"},400);
+  await env.DB.prepare("UPDATE staff_messages SET status=?,updated_at=? WHERE id=?").bind(status,new Date().toISOString(),String(b.messageId)).run();
+  return authJson({ok:true});
+ }
+ if(url.pathname==="/api/staff/members"&&request.method==="POST"){
+  if(!owner)return authJson({error:"OWNER_REQUIRED"},403);
+  let b;try{b=await request.json()}catch{return authJson({error:"INVALID_JSON"},400)}
+  const email=String(b.email||"").trim().toLowerCase();
+  const target=await env.DB.prepare("SELECT id FROM users WHERE email_norm=? AND status='active'").bind(email).first();
+  if(!target)return authJson({error:"USER_NOT_FOUND"},404);
+  await env.DB.prepare("INSERT OR REPLACE INTO staff_members (user_id,role,created_at) VALUES (?,'staff',?)").bind(target.id,new Date().toISOString()).run();
+  return authJson({ok:true});
+ }
+ return authJson({error:"NOT_FOUND"},404);
+}
+
+export default {async fetch(request,env){const url=new URL(request.url);let pathname=url.pathname;try{pathname=decodeURIComponent(pathname)}catch(e){return new Response("Invalid URL",{status:400})}if(pathname.startsWith("/media/")){try{const response=await handleMedia(request,env,url);if(response)return response}catch(e){console.error("LENSORA_MEDIA_ERROR",e);return new Response("Media error",{status:500})}}if(pathname.startsWith("/api/portfolio/works")){try{const response=await handlePortfolio(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_PORTFOLIO_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/staff/")){try{const response=await handleStaff(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_STAFF_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/competitions")){try{const response=await handleCompetitions(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_COMPETITIONS_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/auth/")){try{const response=await handleAuth(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_AUTH_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname==="/api/profile-services"){try{const response=await handleCreatorServices(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_SERVICES_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/profile/")){try{const response=await handleProfile(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_PROFILE_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname==="/health")return new Response("LENSORA OK",{headers:{"content-type":"text/plain; charset=utf-8","cache-control":"no-store"}});if(pathname!=="/"&&pathname!=="/index.html"&&pathname!=="/competitions"&&pathname!=="/competitions/demo"&&!(pathname.startsWith("/@")&&pathname.slice(2).split("").every(c=>"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-".includes(c))))return new Response("Not found",{status:404});return new Response(PAGE,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"strict-origin-when-cross-origin","x-frame-options":"DENY","content-security-policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'","permissions-policy":"camera=(), microphone=(), geolocation=()"}})}};
