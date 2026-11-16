@@ -598,4 +598,58 @@ async function handleMedia(request,env,url){
  return new Response(object.body,{headers});
 }
 
-export default {async fetch(request,env){const url=new URL(request.url);let pathname=url.pathname;try{pathname=decodeURIComponent(pathname)}catch(e){return new Response("Invalid URL",{status:400})}if(pathname.startsWith("/media/")){try{const response=await handleMedia(request,env,url);if(response)return response}catch(e){console.error("LENSORA_MEDIA_ERROR",e);return new Response("Media error",{status:500})}}if(pathname.startsWith("/api/portfolio/works")){try{const response=await handlePortfolio(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_PORTFOLIO_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/auth/")){try{const response=await handleAuth(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_AUTH_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname==="/api/profile-services"){try{const response=await handleCreatorServices(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_SERVICES_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/profile/")){try{const response=await handleProfile(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_PROFILE_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname==="/health")return new Response("LENSORA OK",{headers:{"content-type":"text/plain; charset=utf-8","cache-control":"no-store"}});if(pathname!=="/"&&pathname!=="/index.html"&&!/^\/@[a-zA-Z0-9._-]+$/.test(pathname))return new Response("Not found",{status:404});return new Response(PAGE,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"strict-origin-when-cross-origin","x-frame-options":"DENY","content-security-policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'","permissions-policy":"camera=(), microphone=(), geolocation=()"}})}};
+
+async function handleCompetitions(request,env,url){
+ if(!url.pathname.startsWith("/api/competitions"))return null;
+ if(!env?.DB)return authJson({error:"DATABASE_UNAVAILABLE"},503);
+ const competitionId="portrait-nov-2026";
+ const user=await authCurrentUser(request,env);
+ const isAdmin=async()=>!!user&&!!(await env.DB.prepare("SELECT 1 AS ok FROM competition_admins WHERE user_id=?").bind(user.id).first());
+ if(url.pathname==="/api/competitions/public"&&request.method==="GET"){
+  const c=await env.DB.prepare("SELECT id,title,description,entry_fee_jod,prize_jod,max_participants,status,start_at FROM competitions WHERE id=?").bind(competitionId).first();
+  if(!c)return authJson({error:"COMPETITION_NOT_FOUND"},404);
+  const counts=await env.DB.prepare("SELECT (SELECT COUNT(*) FROM competition_participants WHERE competition_id=?) AS participants,(SELECT COUNT(*) FROM competition_requests WHERE competition_id=? AND status='pending') AS pending").bind(competitionId,competitionId).first();
+  const participants=await env.DB.prepare("SELECT cp.seed,u.username,u.first_name,u.last_name,p.avatar_url FROM competition_participants cp JOIN users u ON u.id=cp.user_id LEFT JOIN profiles p ON p.user_id=u.id WHERE cp.competition_id=? ORDER BY cp.seed").bind(competitionId).all();
+  const matches=await env.DB.prepare("SELECT m.id,m.round,m.match_number,m.starts_at,m.ends_at,m.extension_count,m.status,m.winner_id,pa.username AS a_username,pa.first_name AS a_first_name,pa.last_name AS a_last_name,pb.username AS b_username,pb.first_name AS b_first_name,pb.last_name AS b_last_name,(SELECT COUNT(*) FROM competition_votes v WHERE v.match_id=m.id AND v.participant_id=m.participant_a) AS votes_a,(SELECT COUNT(*) FROM competition_votes v WHERE v.match_id=m.id AND v.participant_id=m.participant_b) AS votes_b FROM competition_matches m LEFT JOIN competition_participants ca ON ca.id=m.participant_a LEFT JOIN users pa ON pa.id=ca.user_id LEFT JOIN competition_participants cb ON cb.id=m.participant_b LEFT JOIN users pb ON pb.id=cb.user_id WHERE m.competition_id=? ORDER BY m.round DESC,m.match_number").bind(competitionId).all();
+  return authJson({competition:c,counts,participants:participants.results||[],matches:matches.results||[],isAdmin:await isAdmin(),user:user?{id:user.id,username:user.username}:null});
+ }
+ if(url.pathname==="/api/competitions/requests"&&request.method==="POST"){
+  if(!user)return authJson({error:"AUTH_REQUIRED"},401);
+  const origin=request.headers.get("Origin");if(origin!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403);
+  let body;try{body=await request.json()}catch{return authJson({error:"INVALID_JSON"},400)}
+  if(body?.acceptNonRefundable!==true)return authJson({error:"REFUND_POLICY_REQUIRED"},400);
+  const c=await env.DB.prepare("SELECT status,entry_fee_jod FROM competitions WHERE id=?").bind(competitionId).first();
+  if(!c||c.status!=="registration")return authJson({error:"REGISTRATION_CLOSED"},409);
+  const existing=await env.DB.prepare("SELECT status FROM competition_requests WHERE competition_id=? AND user_id=?").bind(competitionId,user.id).first();
+  if(existing)return authJson({error:"REQUEST_ALREADY_EXISTS",status:existing.status},409);
+  const id=authUuid(),now=new Date().toISOString();
+  await env.DB.prepare("INSERT INTO competition_requests (id,competition_id,user_id,status,fee_jod,note,created_at,updated_at) VALUES (?,?,?,'pending',?,'',?,?)").bind(id,competitionId,user.id,c.entry_fee_jod,now,now).run();
+  return authJson({ok:true,requestId:id,message:"تم استلام طلبك. الطلب لا يحجز مقعداً؛ سيتواصل معك فريق الدعم لترتيب الدفع."},201);
+ }
+ if(url.pathname==="/api/competitions/admin/requests"&&request.method==="GET"){
+  if(!await isAdmin())return authJson({error:"ADMIN_REQUIRED"},403);
+  const rows=await env.DB.prepare("SELECT r.id,r.status,r.fee_jod,r.created_at,u.id AS user_id,u.username,u.first_name,u.last_name,u.email FROM competition_requests r JOIN users u ON u.id=r.user_id WHERE r.competition_id=? ORDER BY CASE r.status WHEN 'pending' THEN 0 ELSE 1 END,r.created_at").bind(competitionId).all();
+  const c=await env.DB.prepare("SELECT COUNT(*) AS n FROM competition_participants WHERE competition_id=?").bind(competitionId).first();
+  return authJson({requests:rows.results||[],participantCount:Number(c?.n||0),capacity:64});
+ }
+ if(url.pathname==="/api/competitions/admin/activate"&&request.method==="POST"){
+  if(!await isAdmin())return authJson({error:"ADMIN_REQUIRED"},403);
+  const origin=request.headers.get("Origin");if(origin!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403);
+  let body;try{body=await request.json()}catch{return authJson({error:"INVALID_JSON"},400)}
+  const requestId=String(body?.requestId||"");if(!/^[a-f0-9-]{36}$/i.test(requestId))return authJson({error:"INVALID_REQUEST_ID"},400);
+  const req=await env.DB.prepare("SELECT id,user_id,status FROM competition_requests WHERE id=? AND competition_id=?").bind(requestId,competitionId).first();
+  if(!req)return authJson({error:"REQUEST_NOT_FOUND"},404);
+  if(req.status==="activated")return authJson({error:"ALREADY_ACTIVATED"},409);
+  if(req.status!=="pending")return authJson({error:"REQUEST_NOT_PENDING"},409);
+  const count=await env.DB.prepare("SELECT COUNT(*) AS n FROM competition_participants WHERE competition_id=?").bind(competitionId).first();
+  if(Number(count?.n||0)>=64)return authJson({error:"COMPETITION_FULL"},409);
+  const participantId=authUuid(),now=new Date().toISOString(),seed=Number(count?.n||0)+1;
+  const inserted=await env.DB.prepare("INSERT INTO competition_participants (id,competition_id,user_id,seed,joined_at) SELECT ?,?,?,?,? WHERE (SELECT COUNT(*) FROM competition_participants WHERE competition_id=?)<64 AND EXISTS(SELECT 1 FROM competition_requests WHERE id=? AND status='pending')").bind(participantId,competitionId,req.user_id,seed,now,competitionId,requestId).run();
+  if(!inserted.meta?.changes)return authJson({error:"CAPACITY_OR_STATUS_CHANGED"},409);
+  await env.DB.prepare("UPDATE competition_requests SET status='activated',updated_at=? WHERE id=? AND status='pending'").bind(now,requestId).run();
+  return authJson({ok:true,participantId,seed,participantCount:seed,message:"تم تفعيل المشاركة. أرسل تأكيداً للمشارك عبر البريد الإلكتروني."},200);
+ }
+ return authJson({error:"NOT_FOUND"},404);
+}
+
+export default {async fetch(request,env){const url=new URL(request.url);let pathname=url.pathname;try{pathname=decodeURIComponent(pathname)}catch(e){return new Response("Invalid URL",{status:400})}if(pathname.startsWith("/media/")){try{const response=await handleMedia(request,env,url);if(response)return response}catch(e){console.error("LENSORA_MEDIA_ERROR",e);return new Response("Media error",{status:500})}}if(pathname.startsWith("/api/portfolio/works")){try{const response=await handlePortfolio(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_PORTFOLIO_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/competitions")){try{const response=await handleCompetitions(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_COMPETITIONS_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/auth/")){try{const response=await handleAuth(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_AUTH_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname==="/api/profile-services"){try{const response=await handleCreatorServices(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_SERVICES_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname.startsWith("/api/profile/")){try{const response=await handleProfile(request,env,url);if(response)return response}catch(e){const requestId=crypto.randomUUID();console.error("LENSORA_PROFILE_ERROR",requestId,e);return authJson({error:"SERVER_ERROR",requestId},500)}}if(pathname==="/health")return new Response("LENSORA OK",{headers:{"content-type":"text/plain; charset=utf-8","cache-control":"no-store"}});if(pathname!=="/"&&pathname!=="/index.html"&&!/^\/@[a-zA-Z0-9._-]+$/.test(pathname))return new Response("Not found",{status:404});return new Response(PAGE,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"strict-origin-when-cross-origin","x-frame-options":"DENY","content-security-policy":"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'","permissions-policy":"camera=(), microphone=(), geolocation=()"}})}};
