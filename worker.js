@@ -410,7 +410,7 @@ document.addEventListener("contextmenu",e=>{if(e.target.closest(".work,.lightbox
 try{let savedLang=localStorage.getItem("lensora-language");if(savedLang==="en")lang="en";if(localStorage.getItem("lensora-theme")==="light")document.body.classList.add("light")}catch(e){}
 setLanguage(lang);renderCreators();renderServices();let currentPath=location.pathname;try{currentPath=decodeURIComponent(currentPath)}catch(e){}const profileMatch=currentPath.match(/^\/@([^/]+)$/);if(profileMatch){const creator=creators.find(c=>c.user.replace(/^@/,"").toLowerCase()===profileMatch[1].toLowerCase());if(creator)renderProfilePage(creator.id);else renderMemberProfile(profileMatch[1])}
 
-async function loadCompetitionPanel(){
+function compEscape(v){return String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c]))}\nasync function loadCompetitionPanel(){
  const note=document.getElementById("compStatus");if(!note)return;
  try{
   const res=await fetch("/api/competitions/public",{credentials:"same-origin"}),data=await res.json();
@@ -420,7 +420,7 @@ async function loadCompetitionPanel(){
   document.getElementById("compApply").disabled=data.competition.status!=="registration";
   document.getElementById("compApply").textContent=data.competition.status==="registration"?"طلب المشاركة":"التسجيل غير متاح حالياً";
   const participants=document.getElementById("compParticipants");
-  participants.innerHTML=(data.participants||[]).map(p=>'<span class="competition-participant">#'+Number(p.seed)+' · '+escapeHtml(p.first_name+' '+p.last_name)+'</span>').join("");
+  participants.innerHTML=(data.participants||[]).map(p=>'<span class="competition-participant">#'+Number(p.seed)+' · '+compEscape(p.first_name+' '+p.last_name)+'</span>').join("");
   const adminButton=document.getElementById("compAdminToggle");adminButton.hidden=!data.isAdmin;
   if(data.isAdmin)adminButton.onclick=async()=>{const panel=document.getElementById("compAdminPanel");panel.hidden=!panel.hidden;if(!panel.hidden)await loadCompetitionAdmin()};
  }catch(e){note.textContent="تعذر تحميل بيانات المسابقة حالياً."}
@@ -429,7 +429,7 @@ async function loadCompetitionAdmin(){
  const panel=document.getElementById("compAdminPanel");panel.innerHTML="<p>جارٍ تحميل الطلبات...</p>";
  try{
   const res=await fetch("/api/competitions/admin/requests",{credentials:"same-origin"}),data=await res.json();if(!res.ok)throw new Error(data.error||"تعذر التحميل");
-  panel.innerHTML='<h3>طلبات التسجيل · '+data.participantCount+' / 64</h3>'+(data.requests||[]).map(r=>'<div class="competition-request"><div><b>'+escapeHtml(r.first_name+' '+r.last_name)+' (@'+escapeHtml(r.username)+')</b><small>'+escapeHtml(r.email)+' · '+escapeHtml(r.status)+' · '+Number(r.fee_jod).toFixed(2)+' د.أ</small></div><div><a class="btn ghost small" href="mailto:'+encodeURIComponent(r.email)+'?subject='+encodeURIComponent('طلب المشاركة في مسابقة LENSORA')+'">مراسلة بالبريد</a> '+(r.status==="pending"?'<button class="btn small" data-activate="'+r.id+'">تفعيل بعد استلام الرسوم</button>':"")+'</div></div>').join("")||"<p>لا توجد طلبات حتى الآن.</p>";
+  panel.innerHTML='<h3>طلبات التسجيل · '+data.participantCount+' / 64</h3>'+(data.requests||[]).map(r=>'<div class="competition-request"><div><b>'+compEscape(r.first_name+' '+r.last_name)+' (@'+compEscape(r.username)+')</b><small>'+compEscape(r.email)+' · '+compEscape(r.status)+' · '+Number(r.fee_jod).toFixed(2)+' د.أ</small></div><div><a class="btn ghost small" href="mailto:'+encodeURIComponent(r.email)+'?subject='+encodeURIComponent('طلب المشاركة في مسابقة LENSORA')+'">مراسلة بالبريد</a> '+(r.status==="pending"?'<button class="btn small" data-activate="'+r.id+'">تفعيل بعد استلام الرسوم</button>':"")+'</div></div>').join("")||"<p>لا توجد طلبات حتى الآن.</p>";
   panel.querySelectorAll("[data-activate]").forEach(btn=>btn.addEventListener("click",async()=>{if(!confirm("تأكيد استلام الرسوم فعلياً وتفعيل هذه المشاركة؟"))return;btn.disabled=true;try{const a=await fetch("/api/competitions/admin/activate",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({requestId:btn.dataset.activate})});const j=await a.json();if(!a.ok)throw new Error(j.error||"تعذر التفعيل");await loadCompetitionPanel();await loadCompetitionAdmin()}catch(e){alert("لم يتم التفعيل: "+e.message);btn.disabled=false}}));
  }catch(e){panel.innerHTML="<p>تعذر تحميل لوحة الإدارة.</p>"}
 }
