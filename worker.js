@@ -62,6 +62,38 @@ body.en .creator-actions .text-btn:hover{transform:translateX(3px)}
 .lightbox-close-float{position:absolute;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));z-index:100000;width:52px;height:52px;display:grid;place-items:center;border:2px solid #d9c18b;background:#17130df2;color:#fff;border-radius:50%;font:400 34px/1 Arial,sans-serif;cursor:pointer;pointer-events:auto;touch-action:manipulation;user-select:none;-webkit-tap-highlight-color:transparent;box-shadow:0 5px 24px #000b}
 .lightbox-close-float:focus-visible{outline:3px solid #c9a45e;outline-offset:3px}
 @media(max-width:580px){.lightbox-close-float{top:calc(9px + env(safe-area-inset-top));right:9px;width:46px;height:46px}}
+
+/* LENSORA account access */
+.auth-layout{display:grid;grid-template-columns:.82fr 1.18fr;min-height:530px;margin:-28px}
+.auth-brand-panel{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:38px;background:radial-gradient(circle at 15% 15%,#c9a45e22,transparent 42%),linear-gradient(145deg,#211b10,#111411 72%);border-inline-end:1px solid #c9a45e44}
+.auth-brand-mark{width:82px;height:82px;border:1px solid var(--gold);border-radius:50%;display:grid;place-items:center;margin-bottom:34px;box-shadow:0 0 35px #c9a45e20}
+.auth-brand-mark span{width:45px;height:45px;border:2px solid var(--gold);border-radius:50%;position:relative}
+.auth-brand-mark span:after{content:"";position:absolute;width:12px;height:12px;inset:0;margin:auto;background:var(--gold);border-radius:50%;box-shadow:0 0 18px var(--gold)}
+.auth-brand-panel h2{font-size:30px;line-height:1.5;color:#f2e5c8;margin:14px 0}
+.auth-brand-panel p{color:#b8b1a1;line-height:2;font-size:14px}
+.auth-brand-line{height:1px;width:75%;background:linear-gradient(90deg,var(--gold),transparent);margin-top:28px}
+.auth-form-panel{padding:36px 34px}
+.auth-form-panel>h2{font-size:29px;margin:9px 0 5px}
+.auth-subtitle{font-size:13px;margin-bottom:20px}
+.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:5px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;margin:18px 0}
+.auth-tabs button{border:0;background:transparent;color:var(--muted);padding:10px;border-radius:6px;font-weight:700}
+.auth-tabs button.active{background:var(--gold);color:#17140d;box-shadow:0 3px 12px #c9a45e25}
+.auth-form{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.auth-field{display:grid;gap:7px;min-width:0}
+.auth-field span{font-size:12px;color:var(--soft);font-weight:700}
+.auth-field input{width:100%;min-width:0;padding:12px 13px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);outline:none;transition:border-color .2s,box-shadow .2s}
+.auth-field input:focus{border-color:var(--gold);box-shadow:0 0 0 3px #c9a45e18}
+.auth-form:has([name="identity"]) .auth-field,.auth-form:has([name="identity"]) .auth-submit,.auth-form:has([name="identity"]) .auth-feedback{grid-column:1/-1}
+.auth-policy,.auth-help-row,.auth-submit,.auth-feedback{grid-column:1/-1}
+.auth-policy{display:flex;align-items:flex-start;gap:9px;color:var(--muted);font-size:12px;line-height:1.7;margin:3px 0}
+.auth-policy input{accent-color:var(--gold);margin-top:3px}
+.auth-help-row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--gold2)}
+.auth-muted{color:var(--muted)}
+.auth-submit{width:100%;margin-top:3px;min-height:47px}
+.auth-submit span{font-size:18px}
+.auth-feedback{min-height:0;color:var(--gold2);font-size:12px;line-height:1.8;margin:0}
+.auth-legal{font-size:11px!important;text-align:center;margin:17px 0 0}
+@media(max-width:700px){.auth-layout{grid-template-columns:1fr;margin:-22px -16px}.auth-brand-panel{display:none}.auth-form-panel{padding:28px 20px}.auth-form-panel>h2{font-size:25px}.auth-form{grid-template-columns:1fr}.auth-field{grid-column:1/-1}.modal-card:has(.auth-layout){padding:22px 16px}.auth-help-row{display:grid}}
 </style>
 </head>
 <body>
@@ -176,7 +208,19 @@ function openProfile(id){const c=creators.find(x=>x.id===Number(id));if(!c)retur
 function showDirectory(){activeProfileId=null;document.body.classList.remove("profile-route");const brandLink=document.querySelector(".topbar .brand");if(brandLink)brandLink.href="#home";$("#profilePage").innerHTML=""}
 window.addEventListener("popstate",()=>{let path=location.pathname;try{path=decodeURIComponent(path)}catch(e){}const m=path.match(/^\/@([^/]+)$/);if(m){const c=creators.find(x=>x.user.replace(/^@/,"").toLowerCase()===m[1].toLowerCase());if(c)renderProfilePage(c.id);else showDirectory()}else showDirectory()});
 function renderServices(){let q=$("#serviceSearch").value.trim().toLowerCase();let arr=services.filter(s=>(serviceCat==="all"||s.cat===serviceCat)&&(!q||(t(s.title)+" "+t(s.desc)).toLowerCase().includes(q)));$("#serviceGrid").innerHTML=arr.map(s=>{let c=creators[s.creator];return '<article class="service"><img src="'+s.img+'" alt=""><div class="service-body"><h3>'+t(s.title)+'</h3><p>'+t(s.desc)+'</p><div class="creator-meta">'+(lang==="ar"?c.ar:c.en)+' '+verificationBadge(c)+'</div><div class="service-foot"><span class="price">'+s.price+' <small>JOD</small></span><button class="text-btn" data-request="'+s.title+'">'+t("requestService")+' ←</button></div></div></article>'}).join("");$("[data-request]").forEach(b=>b.onclick=()=>showAuth("signup"));bindVerifiedBadges()}
-function showAuth(type){$("#modalContent").innerHTML='<div class="eyebrow">LENSORA</div><h2>'+t(type==="login"?"loginTitle":"signupTitle")+'</h2><p>'+t("demoAuth")+'</p><button class="btn" id="authClose">'+t("close")+'</button>';$("#modal").classList.add("open");$("#authClose").onclick=()=>$("#modal").classList.remove("open")}
+function showAuth(type){
+ const isLogin=type==="login";
+ const title=isLogin?(lang==="ar"?"مرحباً بعودتك":"Welcome back"):(lang==="ar"?"انضم إلى LENSORA":"Join LENSORA");
+ const subtitle=isLogin?(lang==="ar"?"سجّل دخولك لمتابعة عالمك الإبداعي.":"Sign in to continue your creative journey."):(lang==="ar"?"أنشئ حسابك وابدأ بعرض أعمالك والوصول إلى مجتمع المبدعين.":"Create your account and showcase your work to a creative community.");
+ const field=(label,name,placeholder,inputType="text",required=true)=>'<label class="auth-field"><span>'+label+'</span><input name="'+name+'" type="'+inputType+'" placeholder="'+placeholder+'" '+(required?'required':'')+' autocomplete="'+(name==="password"?(isLogin?"current-password":"new-password"):name)+'"></label>';
+ const loginFields=field(lang==="ar"?"البريد الإلكتروني أو اسم المستخدم":"Email or username","identity",lang==="ar"?"أدخل بريدك أو اسم المستخدم":"Enter email or username")+field(lang==="ar"?"كلمة المرور":"Password","password",lang==="ar"?"أدخل كلمة المرور":"Enter your password","password");
+ const signupFields=field(lang==="ar"?"الاسم الأول":"First name","firstName",lang==="ar"?"الاسم الأول":"First name")+field(lang==="ar"?"اسم العائلة":"Last name","lastName",lang==="ar"?"اسم العائلة":"Last name")+field(lang==="ar"?"اسم المستخدم":"Username","username","@username")+field(lang==="ar"?"البريد الإلكتروني":"Email","email","name@example.com","email")+field(lang==="ar"?"كلمة المرور":"Password","password",lang==="ar"?"8 أحرف على الأقل":"At least 8 characters","password")+field(lang==="ar"?"تأكيد كلمة المرور":"Confirm password","confirmPassword",lang==="ar"?"أعد كتابة كلمة المرور":"Re-enter your password","password");
+ const policy=lang==="ar"?"أوافق على شروط المحتوى الممنوع نشره في LENSORA":"I agree to LENSORA's prohibited-content policy";
+ $("#modalContent").innerHTML='<div class="auth-layout"><div class="auth-brand-panel"><div class="auth-brand-mark"><span></span></div><div class="eyebrow">LENSORA / CREATIVE COMMUNITY</div><h2>'+(lang==="ar"?"مساحتك، رؤيتك، إبداعك":"Your space. Your vision. Your creativity.")+'</h2><p>'+(lang==="ar"?"منصة تجمع المصورين وصنّاع الفيديو والمصممين والمبدعين البصريين في مكان واحد.":"A home for photographers, filmmakers, designers and visual creators.")+'</p><div class="auth-brand-line"></div></div><div class="auth-form-panel"><div class="eyebrow">ACCOUNT ACCESS</div><h2>'+title+'</h2><p class="auth-subtitle">'+subtitle+'</p><div class="auth-tabs"><button type="button" data-auth-tab="login" class="'+(isLogin?"active":"")+'">'+(lang==="ar"?"تسجيل الدخول":"Sign in")+'</button><button type="button" data-auth-tab="signup" class="'+(!isLogin?"active":"")+'">'+(lang==="ar"?"إنشاء حساب":"Create account")+'</button></div><form id="authForm" class="auth-form" novalidate>'+(isLogin?loginFields:signupFields)+(!isLogin?'<label class="auth-policy"><input type="checkbox" name="policy" required><span>'+policy+'</span></label>':'<div class="auth-help-row"><span>'+ (lang==="ar"?"هل نسيت كلمة المرور؟":"Forgot your password?")+'</span><span class="auth-muted">'+(lang==="ar"?"استعادة الحساب ستتوفر قريباً":"Account recovery will be available soon")+'</span></div>')+'<button class="btn auth-submit" type="submit">'+(isLogin?(lang==="ar"?"دخول إلى حسابي":"Sign in to my account"):(lang==="ar"?"إنشاء حسابي":"Create my account"))+' <span>↗</span></button><p class="auth-feedback" id="authFeedback" role="status"></p></form><p class="auth-legal">'+(lang==="ar"?"بمتابعتك، أنت توافق على شروط استخدام LENSORA.":"By continuing, you agree to LENSORA's terms of use.")+'</p></div></div>';
+ $("#modal").classList.add("open");
+ $$("[data-auth-tab]").forEach(b=>b.onclick=()=>showAuth(b.dataset.authTab));
+ $("#authForm").onsubmit=e=>{e.preventDefault();const form=e.currentTarget;if(!form.reportValidity())return;const feedback=$("#authFeedback");feedback.textContent=lang==="ar"?"اكتمل التحقق من الحقول. ربط نظام الحسابات سيتم في المرحلة التالية؛ لم يتم إنشاء حساب أو تسجيل دخول بعد.":"The fields are valid. Account-system integration comes next; no account has been created and you are not signed in.";};
+}
 $("#lang").onclick=()=>{let v=lang==="ar"?"en":"ar";try{localStorage.setItem("lensora-language",v)}catch(e){}setLanguage(v)};
 $("#theme").onclick=()=>{document.body.classList.toggle("light");let v=document.body.classList.contains("light")?"light":"dark";try{localStorage.setItem("lensora-theme",v)}catch(e){}};
 $("#menu").onclick=()=>$("#navlinks").classList.toggle("open");$$("#navlinks a").forEach(a=>a.onclick=()=>$("#navlinks").classList.remove("open"));
