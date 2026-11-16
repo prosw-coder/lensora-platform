@@ -606,11 +606,11 @@ async function loadStaffInbox(){
  try{const r=await fetch("/api/staff/messages",{credentials:"same-origin"}),d=await r.json();if(!r.ok)throw new Error(d.error||"تعذر تحميل الرسائل");
 
  const previous=p.querySelector("#staffInbox");if(previous)previous.remove();
- p.insertAdjacentHTML("beforeend",'<section id="staffInbox" style="margin-top:20px;border-top:1px solid #66512b;padding-top:15px"><h3>صندوق رسائل الموظفين</h3><div id="staffRows"></div><h4>إضافة موظف</h4><input id="staffEmail" placeholder="البريد المسجل للموظف" style="padding:10px;background:#222;color:#fff"><button id="staffAdd" class="btn small">إضافة</button><p id="staffFeedback"></p></section>');
+ p.insertAdjacentHTML("beforeend",'<section id="staffInbox" style="margin-top:20px;border-top:1px solid #66512b;padding-top:15px"><h3>صندوق رسائل الموظفين</h3><div id="staffRows"></div></section>');
  const rows=p.querySelector("#staffRows");const cats=[["complaint","الشكاوى"],["suggestion","الاقتراحات"],["competition","المسابقات"]];
  rows.innerHTML=cats.map(([cat,label])=>'<h4>'+label+'</h4>'+(d.messages||[]).filter(x=>x.category===cat).map(x=>'<article style="padding:12px;margin:8px 0;background:#20231c;border:1px solid #51452c;border-radius:8px"><b>'+compEscape(x.subject||label)+'</b><p>'+compEscape(x.body)+'</p><small>'+compEscape(x.first_name+" "+x.last_name)+' · '+compEscape(x.email)+' · '+compEscape(x.status)+'</small><p><a style="color:#e5cc91" target="_blank" rel="noopener" href="'+(x.contact_method==="whatsapp"?"https://wa.me/"+encodeURIComponent(x.contact_value.replace(/[^\d]/g,"")):"mailto:"+encodeURIComponent(x.contact_value))+'">التواصل عبر '+(x.contact_method==="whatsapp"?"واتساب":"Gmail")+' · '+compEscape(x.contact_value)+'</a></p><button class="btn ghost small" data-msg="'+x.id+'">إغلاق الرسالة</button></article>').join("")||"<p>لا توجد رسائل.</p>").join("");
  p.querySelectorAll("[data-msg]").forEach(b=>b.onclick=async()=>{await fetch("/api/staff/messages/status",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({messageId:b.dataset.msg,status:"resolved"})});await loadStaffInbox()});
- p.querySelector("#staffAdd").onclick=async()=>{const x=await fetch("/api/staff/members",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({email:p.querySelector("#staffEmail").value})});const j=await x.json();p.querySelector("#staffFeedback").textContent=x.ok?"تمت إضافة الموظف.":(j.error||"تعذر الإضافة")};
+
  }catch(e){p.insertAdjacentHTML("beforeend",'<p>'+compEscape(e.message)+'</p>')}
 }
 function openSupportMessage(){
