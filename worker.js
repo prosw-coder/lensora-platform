@@ -613,14 +613,34 @@ function openSupportMessage(){
 document.getElementById("compApply")?.addEventListener("click",openCompetitionRequest);
 loadCompetitionPanel();
 const support=document.createElement("button");support.textContent="تواصل مع الموظفين";support.style.cssText="position:fixed;bottom:18px;inset-inline-start:18px;z-index:50;background:#c9a45e;color:#17140d;border:0;border-radius:30px;padding:12px 18px;font-weight:800;box-shadow:0 5px 22px #0008";support.onclick=openSupportMessage;document.body.appendChild(support);
-if(location.pathname==="/staff"){
- const oldMain=document.querySelector("main");if(oldMain)oldMain.hidden=true;
- const oldFooter=document.querySelector("footer");if(oldFooter)oldFooter.hidden=true;
- const root=document.createElement("main");root.className="container";root.style.cssText="min-height:75vh;padding:36px 0";
- root.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><small style="color:#c9a45e;letter-spacing:2px">LENSORA · TEAM</small><h1>لوحة تحكم الموظفين</h1><p style="color:#aaa">طلبات المسابقات ورسائل المستخدمين وإدارة التواصل.</p></div><a class="btn ghost" href="/competitions">العودة للموقع</a></div><section id="compAdminPanel" style="margin-top:20px;padding:20px;background:#151711;border:1px solid #51452c;border-radius:12px"><p>جارٍ التحقق من صلاحيات الموظف...</p></section>';
- document.body.appendChild(root);
- fetch("/api/staff/messages",{credentials:"same-origin"}).then(async r=>{if(!r.ok)throw new Error("لا تملك صلاحية دخول لوحة الموظفين.");await loadCompetitionAdmin();await loadStaffInbox()}).catch(e=>{const panel=document.getElementById("compAdminPanel");if(panel)panel.innerHTML='<p style="color:#e5a99a">'+compEscape(e.message)+'</p>'});
-}
+
+ async function renderPanelGate(role){
+  const isAdmin=role==="admin",title=isAdmin?"لوحة الإدارة الرئيسية":"لوحة الموظفين",root=document.createElement("main");root.className="container";root.style.cssText="min-height:75vh;padding:36px 0";
+  const target=isAdmin?"/api/panel-auth/admin":"/api/panel-auth/staff";
+  root.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><small style="color:#c9a45e;letter-spacing:2px">LENSORA · '+(isAdmin?"ADMIN":"TEAM")+'</small><h1>'+title+'</h1><p style="color:#aaa">دخول محمي بكلمة مرور مستقلة.</p></div><a class="btn ghost" href="/">العودة للموقع</a></div><section id="panelGate" style="margin-top:20px;padding:22px;background:#151711;border:1px solid #51452c;border-radius:12px;max-width:560px"><p>جارٍ التحقق من صلاحيات الحساب...</p></section><section id="panelContent" style="margin-top:20px"></section>';
+  document.body.appendChild(root);const gate=root.querySelector("#panelGate"),content=root.querySelector("#panelContent");
+  async function load(){
+   const me=await fetch(target+"/me",{credentials:"same-origin"}),d=await me.json();
+   if(!d.authenticated){
+    gate.innerHTML='<h2 style="margin-top:0">تسجيل دخول اللوحة</h2><p style="color:#aaa">سجّل الدخول إلى حساب LENSORA أولاً، ويجب أن يكون الحساب مخولاً لهذه اللوحة.</p><form id="panelLogin"><input id="panelPassword" type="password" autocomplete="current-password" placeholder="كلمة مرور اللوحة" required style="box-sizing:border-box;width:100%;padding:13px;background:#222;color:#fff;border:1px solid #665638;border-radius:8px"><button class="btn" style="width:100%;margin-top:12px">دخول آمن</button><p id="panelError" style="color:#e5a99a"></p></form>';
+    gate.querySelector("#panelLogin").onsubmit=async e=>{e.preventDefault();const b=e.currentTarget.querySelector("button"),msg=gate.querySelector("#panelError");b.disabled=true;try{const r=await fetch(target+"/login",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({password:gate.querySelector("#panelPassword").value})}),j=await r.json();if(!r.ok)throw new Error(j.error==="ACCOUNT_ROLE_REQUIRED"?"هذا الحساب غير مخوّل لهذه اللوحة.":j.error==="INVALID_PASSWORD"?"كلمة المرور غير صحيحة.":j.error==="PANEL_NOT_CONFIGURED"?"لم يتم إعداد كلمة مرور اللوحة بعد.":j.error||"تعذر تسجيل الدخول");await load()}catch(err){msg.textContent=err.message}finally{b.disabled=false}};
+    content.innerHTML="";return;
+   }
+   gate.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><b style="color:#a9d6a0">تم التحقق من صلاحيات الدخول.</b><button id="panelLogout" class="btn ghost">تسجيل الخروج من اللوحة</button></div>';
+   gate.querySelector("#panelLogout").onclick=async()=>{await fetch(target+"/logout",{method:"POST",credentials:"same-origin"});location.reload()};
+   if(!isAdmin){content.innerHTML='<section id="compAdminPanel" style="padding:20px;background:#151711;border:1px solid #51452c;border-radius:12px"><p>جارٍ تحميل لوحة الموظفين...</p></section>';await loadCompetitionAdmin();await loadStaffInbox();return}
+   const r=await fetch("/api/admin/overview",{credentials:"same-origin"}),j=await r.json();if(!r.ok)throw new Error(j.error||"تعذر تحميل لوحة الإدارة");const s=j.stats||{};
+   content.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px">'+[['المستخدمون',s.users],['الموظفون',s.staff],['الرسائل الجديدة',s.new_messages],['المشاركون',s.participants],['طلبات معلّقة',s.pending_requests]].map(x=>'<article style="padding:18px;background:#151711;border:1px solid #51452c;border-radius:12px"><small style="color:#c9a45e">'+x[0]+'</small><h2 style="margin:8px 0 0">'+Number(x[1]||0)+'</h2></article>').join("")+'</div><section style="margin-top:18px;padding:20px;background:#151711;border:1px solid #51452c;border-radius:12px"><h2>إدارة الموظفين</h2><form id="adminAddStaff" style="display:flex;gap:8px;flex-wrap:wrap"><input id="adminStaffEmail" type="email" required placeholder="البريد الإلكتروني لحساب الموظف" style="flex:1;min-width:220px;padding:12px;background:#222;color:#fff;border:1px solid #665638;border-radius:8px"><button class="btn">إضافة موظف</button></form><p id="adminStaffFeedback"></p><div id="adminStaffList">جارٍ تحميل القائمة...</div></section>';
+   async function refreshStaff(){const x=await fetch("/api/admin/staff",{credentials:"same-origin"}),y=await x.json();if(!x.ok)throw new Error(y.error||"تعذر تحميل الموظفين");content.querySelector("#adminStaffList").innerHTML=(y.staff||[]).map(m=>'<p style="padding:10px;border-bottom:1px solid #51452c">'+compEscape(m.first_name+" "+m.last_name)+' · @'+compEscape(m.username)+' · '+compEscape(m.email)+' · <b>'+(m.role==="owner"?"مدير رئيسي":"موظف")+'</b></p>').join("")}
+   content.querySelector("#adminAddStaff").onsubmit=async e=>{e.preventDefault();const msg=content.querySelector("#adminStaffFeedback");try{const x=await fetch("/api/admin/staff",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({email:content.querySelector("#adminStaffEmail").value})}),y=await x.json();if(!x.ok)throw new Error(y.error==="USER_NOT_FOUND"?"لا يوجد حساب نشط بهذا البريد.":y.error||"تعذرت الإضافة");msg.textContent="تمت إضافة الموظف.";content.querySelector("#adminStaffEmail").value="";await refreshStaff()}catch(err){msg.textContent=err.message}};
+   await refreshStaff();
+  }
+  try{await load()}catch(e){gate.innerHTML='<p style="color:#e5a99a">'+compEscape(e.message)+'</p>'}
+ }
+ if(location.pathname==="/staff"||location.pathname==="/admin"){
+  const oldMain=document.querySelector("main");if(oldMain)oldMain.hidden=true;const oldFooter=document.querySelector("footer");if(oldFooter)oldFooter.hidden=true;
+  renderPanelGate(location.pathname==="/admin"?"admin":"staff");
+ }
 </script>
 </body></html>`;
 
