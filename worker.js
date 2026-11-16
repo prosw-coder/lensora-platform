@@ -617,16 +617,16 @@ const support=document.createElement("button");support.textContent="تواصل �
  async function renderPanelGate(role){
   const isAdmin=role==="admin",title=isAdmin?"لوحة الإدارة الرئيسية":"لوحة الموظفين",root=document.createElement("main");root.className="container";root.style.cssText="min-height:75vh;padding:36px 0";
   const target=isAdmin?"/api/panel-auth/admin":"/api/panel-auth/staff";
-  root.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><small style="color:#c9a45e;letter-spacing:2px">LENSORA · '+(isAdmin?"ADMIN":"TEAM")+'</small><h1>'+title+'</h1><p style="color:#aaa">دخول محمي بكلمة مرور مستقلة.</p></div><a class="btn ghost" href="/">العودة للموقع</a></div><section id="panelGate" style="margin-top:20px;padding:22px;background:#151711;border:1px solid #51452c;border-radius:12px;max-width:560px"><p>جارٍ التحقق من صلاحيات الحساب...</p></section><section id="panelContent" style="margin-top:20px"></section>';
+  root.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><small style="color:#c9a45e;letter-spacing:2px">LENSORA · '+(isAdmin?"ADMIN":"TEAM")+'</small><h1>'+title+'</h1><p style="color:#aaa">'+(isAdmin?"دخول الإدارة محمي بكلمة مرور مستقلة وحساب المدير.":"دخول مستقل للموظفين: يكفي إدخال كلمة مرور الموظفين، دون حساب LENSORA.")+'</p></div><a class="btn ghost" href="/">العودة للموقع</a></div><section id="panelGate" style="margin-top:20px;padding:22px;background:#151711;border:1px solid #51452c;border-radius:12px;max-width:560px"><p>جارٍ التحقق من صلاحيات الحساب...</p></section><section id="panelContent" style="margin-top:20px"></section>';
   document.body.appendChild(root);const gate=root.querySelector("#panelGate"),content=root.querySelector("#panelContent");
   async function load(){
    const me=await fetch(target+"/me",{credentials:"same-origin"}),d=await me.json();
    if(!d.authenticated){
-    gate.innerHTML='<h2 style="margin-top:0">تسجيل دخول اللوحة</h2><p style="color:#aaa">سجّل الدخول إلى حساب LENSORA أولاً، ويجب أن يكون الحساب مخولاً لهذه اللوحة.</p><form id="panelLogin"><input id="panelPassword" type="password" autocomplete="current-password" placeholder="كلمة مرور اللوحة" required style="box-sizing:border-box;width:100%;padding:13px;background:#222;color:#fff;border:1px solid #665638;border-radius:8px"><button class="btn" style="width:100%;margin-top:12px">دخول آمن</button><p id="panelError" style="color:#e5a99a"></p></form>';
-    gate.querySelector("#panelLogin").onsubmit=async e=>{e.preventDefault();const b=e.currentTarget.querySelector("button"),msg=gate.querySelector("#panelError");b.disabled=true;try{const r=await fetch(target+"/login",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({password:gate.querySelector("#panelPassword").value})}),j=await r.json();if(!r.ok)throw new Error(j.error==="ACCOUNT_ROLE_REQUIRED"?"هذا الحساب غير مخوّل لهذه اللوحة.":j.error==="INVALID_PASSWORD"?"كلمة المرور غير صحيحة.":j.error==="PANEL_NOT_CONFIGURED"?"لم يتم إعداد كلمة مرور اللوحة بعد.":j.error||"تعذر تسجيل الدخول");await load()}catch(err){msg.textContent=err.message}finally{b.disabled=false}};
+    gate.innerHTML='<h2 style="margin-top:0">تسجيل دخول اللوحة</h2><p style="color:#aaa">'+(isAdmin?"يجب تسجيل الدخول إلى حساب المدير المعتمد ثم إدخال كلمة مرور الإدارة.":"أدخل كلمة مرور الموظفين فقط. لا تحتاج إلى حساب LENSORA أو تسجيل دخول شخصي.")+'</p><form id="panelLogin"><input id="panelPassword" type="password" autocomplete="current-password" placeholder="كلمة مرور اللوحة" required style="box-sizing:border-box;width:100%;padding:13px;background:#222;color:#fff;border:1px solid #665638;border-radius:8px"><button class="btn" style="width:100%;margin-top:12px">دخول آمن</button><p id="panelError" style="color:#e5a99a"></p></form>';
+    gate.querySelector("#panelLogin").onsubmit=async e=>{e.preventDefault();const b=e.currentTarget.querySelector("button"),msg=gate.querySelector("#panelError");b.disabled=true;try{const r=await fetch(target+"/login",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({password:gate.querySelector("#panelPassword").value})}),j=await r.json();if(!r.ok)throw new Error(j.error==="ACCOUNT_ROLE_REQUIRED"?"يجب استخدام حساب المدير المعتمد.":j.error==="INVALID_PASSWORD"?"كلمة المرور غير صحيحة.":j.error==="PANEL_NOT_CONFIGURED"?"لم يتم إعداد كلمة مرور اللوحة بعد.":j.error||"تعذر تسجيل الدخول");await load()}catch(err){msg.textContent=err.message}finally{b.disabled=false}};
     content.innerHTML="";return;
    }
-   gate.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><b style="color:#a9d6a0">تم التحقق من صلاحيات الدخول.</b><button id="panelLogout" class="btn ghost">تسجيل الخروج من اللوحة</button></div>';
+   gate.innerHTML='<div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><b style="color:#a9d6a0">'+(isAdmin?"تم التحقق من دخول الإدارة.":"تم التحقق من كلمة مرور الموظفين.")+'</b><button id="panelLogout" class="btn ghost">تسجيل الخروج من اللوحة</button></div>';
    gate.querySelector("#panelLogout").onclick=async()=>{await fetch(target+"/logout",{method:"POST",credentials:"same-origin"});location.reload()};
    if(!isAdmin){content.innerHTML='<section id="compAdminPanel" style="padding:20px;background:#151711;border:1px solid #51452c;border-radius:12px"><p>جارٍ تحميل لوحة الموظفين...</p></section>';await loadCompetitionAdmin();await loadStaffInbox();return}
    const r=await fetch("/api/admin/overview",{credentials:"same-origin"}),j=await r.json();if(!r.ok)throw new Error(j.error||"تعذر تحميل لوحة الإدارة");const s=j.stats||{};
@@ -687,7 +687,8 @@ async function handlePanelAuth(request,env,url){
  const m=url.pathname.match(/^\/api\/panel-auth\/(admin|staff)\/(login|me|logout)$/);if(!m)return authJson({error:"NOT_FOUND"},404);
  const role=m[1],action=m[2],secret=env[panelSecretName(role)];
  if(action==="me"&&request.method==="GET"){
-  const user=await panelRoleUser(request,env,role),valid=await panelSessionValid(request,env,role);
+  const valid=await panelSessionValid(request,env,role);
+  const user=role==="admin"?await panelRoleUser(request,env,role):true;
   return authJson({authenticated:!!(user&&valid),reason:!user?"ACCOUNT_ROLE_REQUIRED":!valid?"PANEL_PASSWORD_REQUIRED":null});
  }
  if(action==="logout"&&request.method==="POST"){
@@ -704,8 +705,10 @@ async function handlePanelAuth(request,env,url){
  const valid=authEqual(await authHash(password),await authHash(secret));
  await authLogAttempt(env,ipHash,identityHash,valid);
  if(!valid)return authJson({error:"INVALID_PASSWORD"},401);
- const user=await panelRoleUser(request,env,role);
- if(!user)return authJson({error:"ACCOUNT_ROLE_REQUIRED"},403);
+ if(role==="admin"){
+  const user=await panelRoleUser(request,env,role);
+  if(!user)return authJson({error:"ACCOUNT_ROLE_REQUIRED"},403);
+ }
  return authJson({ok:true},200,{"set-cookie":await panelSetCookie(role,env)});
 }
 async function handleAdmin(request,env,url){
@@ -933,7 +936,7 @@ async function handleCompetitions(request,env,url){
  const path=url.pathname.replace("/api/competitions/demo","/api/competitions");
  const user=await authCurrentUser(request,env);
  const isAdmin=async()=>!!user&&!!(await env.DB.prepare("SELECT 1 AS ok FROM competition_admins WHERE user_id=?").bind(user.id).first());
- const isStaff=async()=>!!user&&!!(await env.DB.prepare("SELECT 1 AS ok FROM staff_members WHERE user_id=?").bind(user.id).first())&&await panelSessionValid(request,env,"staff");
+ const isStaff=async()=>await panelSessionValid(request,env,"staff");
  if(path==="/api/competitions/public"&&request.method==="GET"){
   const voterHash=await competitionVoterHash(request);
   const c=await env.DB.prepare("SELECT id,title,description,entry_fee_jod,prize_jod,max_participants,status,start_at FROM competitions WHERE id=?").bind(competitionId).first();
@@ -1026,7 +1029,7 @@ async function handleStaff(request,env,url){
  if(!env?.DB)return authJson({error:"DATABASE_UNAVAILABLE"},503);
  const user=await authCurrentUser(request,env);
  const member=user?await env.DB.prepare("SELECT role FROM staff_members WHERE user_id=?").bind(user.id).first():null;
- const staffOk=!!member&&await panelSessionValid(request,env,"staff"),owner=member?.role==="owner"&&await panelSessionValid(request,env,"admin");
+ const staffOk=await panelSessionValid(request,env,"staff"),owner=member?.role==="owner"&&await panelSessionValid(request,env,"admin");
  if(request.method==="POST"){const origin=request.headers.get("Origin");if(origin!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403)}
  if(url.pathname==="/api/staff/messages"&&request.method==="POST"){
   if(!user)return authJson({error:"AUTH_REQUIRED"},401);
