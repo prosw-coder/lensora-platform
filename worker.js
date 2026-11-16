@@ -1,4 +1,4 @@
-const PAGE = String.raw\`<!doctype html>
+const PAGE = String.raw`<!doctype html>
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -119,5 +119,5 @@ document.addEventListener("contextmenu",e=>{if(e.target.closest(".work,.lightbox
 try{let savedLang=localStorage.getItem("lensora-language");if(savedLang==="en")lang="en";if(localStorage.getItem("lensora-theme")==="light")document.body.classList.add("light")}catch(e){}
 setLanguage(lang);renderCreators();renderServices();
 </script>
-</body></html>\`;
+</body></html>`;
 export default {async fetch(request){const url=new URL(request.url);if(url.pathname==="/health")return new Response("LENSORA OK",{headers:{"content-type":"text/plain; charset=utf-8","cache-control":"no-store"}});if(url.pathname!=="/"&&url.pathname!=="/index.html")return new Response("Not found",{status:404});return new Response(PAGE,{headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"strict-origin-when-cross-origin"}})}};
