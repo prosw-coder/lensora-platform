@@ -397,7 +397,7 @@ $("#moreCreators").onclick=()=>{creatorLimit+=3;renderCreators()};
 $("#serviceSearch").oninput=renderServices;$$("[data-service]").forEach(b=>b.onclick=()=>{serviceCat=b.dataset.service;$$("[data-service]").forEach(x=>x.classList.toggle("active",x===b));renderServices()});
 $("#heroSearch").onsubmit=e=>{e.preventDefault();$("#creatorSearch").value=$("#globalSearch").value;creatorLimit=3;renderCreators();$("#creators").scrollIntoView({behavior:"smooth"})};
 $("#moreWorks").onclick=()=>{workExpanded=!workExpanded;$$(".more-work").forEach(el=>el.hidden=!workExpanded);$("#moreWorks").textContent=workExpanded?(lang==="ar"?"عرض أقل":"Show less"):t("showMore")};
-$$$(".more-work").forEach(el=>el.hidden=true);
+$(".more-work").forEach(el=>el.hidden=true);
 let slides=[{src:"https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1400&q=90",caption:"heroCaption"},{src:"https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1400&q=90",caption:"work2"},{src:"https://images.unsplash.com/photo-1511818966892-d7d671e672a2?auto=format&fit=crop&w=1400&q=90",caption:"work3"}];
 function setSlide(i){slide=i;$("#heroImage").src=slides[i].src;$("#heroCaption").textContent=t(slides[i].caption);$$(".hero-dots button").forEach((b,n)=>b.classList.toggle("active",n===i))}$$(".hero-dots button").forEach((b,i)=>b.onclick=()=>setSlide(i));let slideTimer=setInterval(()=>setSlide((slide+1)%slides.length),6000);
 $$(".work").forEach(el=>el.onclick=()=>{let img=el.querySelector("img");$("#lightboxImage").src=img.src;$("#lightboxTitle").textContent=el.querySelector("b").textContent+" · "+el.querySelector("span").textContent;zoom=1;$("#lightboxImage").style.transform="scale(1)";$("#lightbox").classList.add("open")});
