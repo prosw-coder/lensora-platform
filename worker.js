@@ -479,7 +479,6 @@ function authImageMatches(bytes,mime){const b=new Uint8Array(bytes);if(mime==="i
 async function handleCreatorServices(request,env,url){
  if(url.pathname!=="/api/profile-services")return null;
  if(!env?.DB)return authJson({error:"PROFILE_NOT_CONFIGURED"},503);
- await env.DB.prepare("CREATE TABLE IF NOT EXISTS creator_services (user_id TEXT PRIMARY KEY, services_json TEXT NOT NULL DEFAULT '[]', updated_at TEXT NOT NULL, FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE)").run();
  if(request.method==="GET"){
   const username=String(url.searchParams.get("username")||"").replace(/^@/,"").toLowerCase();
   if(!/^[a-z0-9._-]{3,24}$/.test(username))return authJson({error:"INVALID_USERNAME"},400);
@@ -493,7 +492,8 @@ async function handleCreatorServices(request,env,url){
  if(origin!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403);
  if(Number(request.headers.get("Content-Length")||0)>16000)return authJson({error:"REQUEST_TOO_LARGE"},413);
  const owner=await authCurrentUser(request,env);if(!owner)return authJson({error:"AUTH_REQUIRED"},401);
- let body;try{body=await request.json()}catch{return authJson({error:"INVALID_JSON"},400)}
+ const raw=await request.text();if(raw.length>16000)return authJson({error:"REQUEST_TOO_LARGE"},413);
+ let body;try{body=JSON.parse(raw)}catch{return authJson({error:"INVALID_JSON"},400)}
  if(!body||!Array.isArray(body.services)||body.services.length>8)return authJson({error:"INVALID_SERVICES"},400);
  const clean=(v,max)=>String(v??"").trim().slice(0,max);
  const services=[];
