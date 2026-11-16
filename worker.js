@@ -361,7 +361,7 @@ setLanguage(lang);renderCreators();renderServices();let currentPath=location.pat
 </body></html>`;
 
 const AUTH_POLICY_VERSION = "prohibited-content-2026-11-16-v2";
-const AUTH_PASSWORD_ITERATIONS = 180000;
+const AUTH_PASSWORD_ITERATIONS = 100000;
 const AUTH_SESSION_SECONDS = 30 * 24 * 60 * 60;
 const authEncoder = new TextEncoder();
 function authB64(bytes){let s="";for(const b of bytes)s+=String.fromCharCode(b);return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
