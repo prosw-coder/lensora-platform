@@ -436,7 +436,8 @@ async function loadCompetitionAdmin(){
  const panel=document.getElementById("compAdminPanel");panel.innerHTML="<p>جارٍ تحميل الطلبات...</p>";
  try{
   const res=await fetch((location.pathname.endsWith("/demo")?"/api/competitions/demo":"/api/competitions")+"/admin/requests",{credentials:"same-origin"}),data=await res.json();if(!res.ok)throw new Error(data.error||"تعذر التحميل");
-  panel.innerHTML='<h3>طلبات التسجيل · '+data.participantCount+' / 64</h3>'+(data.requests||[]).map(r=>'<div class="competition-request"><div><b>'+compEscape(r.first_name+' '+r.last_name)+' (@'+compEscape(r.username)+')</b><small>'+compEscape(r.email)+' · '+compEscape(r.status)+' · '+Number(r.fee_jod).toFixed(2)+' د.أ</small></div><div><a class="btn ghost small" href="mailto:'+encodeURIComponent(r.email)+'?subject='+encodeURIComponent('طلب المشاركة في مسابقة LENSORA')+'">مراسلة بالبريد</a> '+(r.status==="pending"?'<button class="btn small" data-activate="'+r.id+'">تفعيل بعد استلام الرسوم</button>':"")+'</div></div>').join("")||"<p>لا توجد طلبات حتى الآن.</p>";
+  panel.innerHTML='<h3>طلبات التسجيل · '+data.participantCount+' / 64</h3>'+(data.competitionStatus==="registration"?'<button class="btn small" id="launchCompetition">إطلاق المسابقة وإظهار المشاركين للجميع</button>':'<p class="notice">حالة المسابقة: '+compEscape(data.competitionStatus)+'</p>')+(data.requests||[]).map(r=>'<div class="competition-request"><div><b>'+compEscape(r.first_name+' '+r.last_name)+' (@'+compEscape(r.username)+')</b><small>'+compEscape(r.email)+' · '+compEscape(r.status)+' · '+Number(r.fee_jod).toFixed(2)+' د.أ</small></div><div><a class="btn ghost small" href="mailto:'+encodeURIComponent(r.email)+'?subject='+encodeURIComponent('طلب المشاركة في مسابقة LENSORA')+'">مراسلة بالبريد</a> '+(r.status==="pending"?'<button class="btn small" data-activate="'+r.id+'">تفعيل بعد استلام الرسوم</button>':"")+'</div></div>').join("")||"<p>لا توجد طلبات حتى الآن.</p>";
+  const launchBtn=panel.querySelector("#launchCompetition");if(launchBtn)launchBtn.onclick=async()=>{if(!confirm("إطلاق المسابقة سيُظهر أسماء المشاركين للجميع. هل تريد المتابعة؟"))return;launchBtn.disabled=true;try{const r=await fetch((location.pathname.endsWith("/demo")?"/api/competitions/demo":"/api/competitions")+"/admin/launch",{method:"POST",credentials:"same-origin"});const d=await r.json();if(!r.ok)throw new Error(d.error||"تعذر الإطلاق");await loadCompetitionPanel();await loadCompetitionAdmin()}catch(e){alert(e.message);launchBtn.disabled=false}};
   panel.querySelectorAll("[data-activate]").forEach(btn=>btn.addEventListener("click",async()=>{if(!confirm("تأكيد استلام الرسوم فعلياً وتفعيل هذه المشاركة؟"))return;btn.disabled=true;try{const a=await fetch((location.pathname.endsWith("/demo")?"/api/competitions/demo":"/api/competitions")+"/admin/activate",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({requestId:btn.dataset.activate})});const j=await a.json();if(!a.ok)throw new Error(j.error||"تعذر التفعيل");await loadCompetitionPanel();await loadCompetitionAdmin()}catch(e){alert("لم يتم التفعيل: "+e.message);btn.disabled=false}}));
  }catch(e){panel.innerHTML="<p>تعذر تحميل لوحة الإدارة.</p>"}
 }
@@ -673,10 +674,11 @@ async function handleCompetitions(request,env,url){
  if(!url.pathname.startsWith("/api/competitions"))return null;
  if(!env?.DB)return authJson({error:"DATABASE_UNAVAILABLE"},503);
  const competitionId=url.pathname.startsWith("/api/competitions/demo/")?"portrait-demo-2026":"portrait-nov-2026";
+ const path=url.pathname.replace("/api/competitions/demo","/api/competitions");
  const user=await authCurrentUser(request,env);
  const isAdmin=async()=>!!user&&!!(await env.DB.prepare("SELECT 1 AS ok FROM competition_admins WHERE user_id=?").bind(user.id).first());
  const isStaff=async()=>!!user&&!!(await env.DB.prepare("SELECT 1 AS ok FROM staff_members WHERE user_id=?").bind(user.id).first());
- if(url.pathname==="/api/competitions/public"&&request.method==="GET"){
+ if(path==="/api/competitions/public"&&request.method==="GET"){
   const c=await env.DB.prepare("SELECT id,title,description,entry_fee_jod,prize_jod,max_participants,status,start_at FROM competitions WHERE id=?").bind(competitionId).first();
   if(!c)return authJson({error:"COMPETITION_NOT_FOUND"},404);
   const counts=await env.DB.prepare("SELECT (SELECT COUNT(*) FROM competition_participants WHERE competition_id=?) AS participants,(SELECT COUNT(*) FROM competition_requests WHERE competition_id=? AND status='pending') AS pending").bind(competitionId,competitionId).first();
@@ -685,7 +687,7 @@ async function handleCompetitions(request,env,url){
   const matches=await env.DB.prepare("SELECT m.id,m.round,m.match_number,m.starts_at,m.ends_at,m.extension_count,m.status,m.winner_id,pa.username AS a_username,pa.first_name AS a_first_name,pa.last_name AS a_last_name,pb.username AS b_username,pb.first_name AS b_first_name,pb.last_name AS b_last_name,(SELECT COUNT(*) FROM competition_votes v WHERE v.match_id=m.id AND v.participant_id=m.participant_a) AS votes_a,(SELECT COUNT(*) FROM competition_votes v WHERE v.match_id=m.id AND v.participant_id=m.participant_b) AS votes_b FROM competition_matches m LEFT JOIN competition_participants ca ON ca.id=m.participant_a LEFT JOIN users pa ON pa.id=ca.user_id LEFT JOIN competition_participants cb ON cb.id=m.participant_b LEFT JOIN users pb ON pb.id=cb.user_id WHERE m.competition_id=? ORDER BY m.round DESC,m.match_number").bind(competitionId).all();
   return authJson({competition:c,counts:{...counts,participants:visible?Number(counts?.participants||0):0},participants:participants.results||[],matches:visible?(matches.results||[]):[],isAdmin:await isAdmin(),isStaff:await isStaff(),user:user?{id:user.id,username:user.username}:null});
  }
- if(url.pathname==="/api/competitions/requests"&&request.method==="POST"){
+ if(path==="/api/competitions/requests"&&request.method==="POST"){
   if(!user)return authJson({error:"AUTH_REQUIRED"},401);
   const origin=request.headers.get("Origin");if(origin!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403);
   let body;try{body=await request.json()}catch{return authJson({error:"INVALID_JSON"},400)}
@@ -704,13 +706,14 @@ async function handleCompetitions(request,env,url){
   ]);
   return authJson({ok:true,requestId:id,messageId,message:"تم استلام طلبك. سيتواصل معك فريق LENSORA عبر الطريقة التي اخترتها لترتيب الدفع."},201);
  }
- if(url.pathname==="/api/competitions/admin/requests"&&request.method==="GET"){
+ if(path==="/api/competitions/admin/requests"&&request.method==="GET"){
   if(!await isStaff())return authJson({error:"STAFF_REQUIRED"},403);
   const rows=await env.DB.prepare("SELECT r.id,r.status,r.fee_jod,r.created_at,r.contact_method,r.contact_value,u.id AS user_id,u.username,u.first_name,u.last_name,u.email FROM competition_requests r JOIN users u ON u.id=r.user_id WHERE r.competition_id=? ORDER BY CASE r.status WHEN 'pending' THEN 0 ELSE 1 END,r.created_at").bind(competitionId).all();
   const c=await env.DB.prepare("SELECT COUNT(*) AS n FROM competition_participants WHERE competition_id=?").bind(competitionId).first();
-  return authJson({requests:rows.results||[],participantCount:Number(c?.n||0),capacity:64});
+  const comp=await env.DB.prepare("SELECT status FROM competitions WHERE id=?").bind(competitionId).first();
+  return authJson({requests:rows.results||[],participantCount:Number(c?.n||0),capacity:64,competitionStatus:comp?.status||"draft"});
  }
- if(url.pathname==="/api/competitions/admin/activate"&&request.method==="POST"){
+ if(path==="/api/competitions/admin/activate"&&request.method==="POST"){
   if(!await isStaff())return authJson({error:"STAFF_REQUIRED"},403);
   const origin=request.headers.get("Origin");if(origin!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403);
   let body;try{body=await request.json()}catch{return authJson({error:"INVALID_JSON"},400)}
@@ -727,6 +730,15 @@ async function handleCompetitions(request,env,url){
   await env.DB.prepare("UPDATE competition_requests SET status='activated',updated_at=? WHERE id=? AND status='pending'").bind(now,requestId).run();
   const joined=await env.DB.prepare("SELECT seed FROM competition_participants WHERE id=?").bind(participantId).first();
   return authJson({ok:true,participantId,seed:joined.seed,participantCount:joined.seed,message:"تم تفعيل المشاركة. أرسل تأكيداً للمشارك عبر البريد الإلكتروني."},200);
+ }
+ if(path==="/api/competitions/admin/launch"&&request.method==="POST"){
+  if(!await isStaff())return authJson({error:"STAFF_REQUIRED"},403);
+  const origin=request.headers.get("Origin");if(origin!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403);
+  const comp=await env.DB.prepare("SELECT status FROM competitions WHERE id=?").bind(competitionId).first();
+  if(!comp)return authJson({error:"COMPETITION_NOT_FOUND"},404);
+  if(comp.status!=="registration")return authJson({error:"NOT_READY_TO_LAUNCH"},409);
+  await env.DB.prepare("UPDATE competitions SET status='active',updated_at=? WHERE id=? AND status='registration'").bind(new Date().toISOString(),competitionId).run();
+  return authJson({ok:true,message:"تم إطلاق المسابقة وإظهار قائمة المشاركين للجميع."});
  }
  return authJson({error:"NOT_FOUND"},404);
 }
