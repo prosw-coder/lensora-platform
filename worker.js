@@ -453,6 +453,8 @@ async function loadStaffInbox(){
  const p=document.getElementById("compAdminPanel");if(!p)return;
  try{const r=await fetch("/api/staff/messages",{credentials:"same-origin"}),d=await r.json();if(!r.ok)throw new Error(d.error||"تعذر تحميل الرسائل");
  p.insertAdjacentHTML("beforeend",'<section id="staffInbox" style="margin-top:20px;border-top:1px solid #66512b;padding-top:15px"><h3>صندوق رسائل الموظفين</h3><div id="staffRows"></div><h4>إضافة موظف</h4><input id="staffEmail" placeholder="البريد المسجل للموظف" style="padding:10px;background:#222;color:#fff"><button id="staffAdd" class="btn small">إضافة</button><p id="staffFeedback"></p></section>');
+ const previous=p.querySelector("#staffInbox");if(previous)previous.remove();
+ p.insertAdjacentHTML("beforeend",'<section id="staffInbox" style="margin-top:20px;border-top:1px solid #66512b;padding-top:15px"><h3>صندوق رسائل الموظفين</h3><div id="staffRows"></div><h4>إضافة موظف</h4><input id="staffEmail" placeholder="البريد المسجل للموظف" style="padding:10px;background:#222;color:#fff"><button id="staffAdd" class="btn small">إضافة</button><p id="staffFeedback"></p></section>');
  const rows=p.querySelector("#staffRows");const cats=[["complaint","الشكاوى"],["suggestion","الاقتراحات"],["competition","المسابقات"]];
  rows.innerHTML=cats.map(([cat,label])=>'<h4>'+label+'</h4>'+(d.messages||[]).filter(x=>x.category===cat).map(x=>'<article style="padding:12px;margin:8px 0;background:#20231c;border:1px solid #51452c;border-radius:8px"><b>'+compEscape(x.subject||label)+'</b><p>'+compEscape(x.body)+'</p><small>'+compEscape(x.first_name+" "+x.last_name)+' · '+compEscape(x.email)+' · '+compEscape(x.status)+'</small><p><a style="color:#e5cc91" target="_blank" rel="noopener" href="'+(x.contact_method==="whatsapp"?"https://wa.me/"+encodeURIComponent(x.contact_value.replace(/[^\d]/g,"")):"mailto:"+encodeURIComponent(x.contact_value))+'">التواصل عبر '+(x.contact_method==="whatsapp"?"واتساب":"Gmail")+' · '+compEscape(x.contact_value)+'</a></p><button class="btn ghost small" data-msg="'+x.id+'">إغلاق الرسالة</button></article>').join("")||"<p>لا توجد رسائل.</p>").join("");
  p.querySelectorAll("[data-msg]").forEach(b=>b.onclick=async()=>{await fetch("/api/staff/messages/status",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({messageId:b.dataset.msg,status:"resolved"})});await loadStaffInbox()});
@@ -694,7 +696,7 @@ async function handleCompetitions(request,env,url){
   if(body?.acceptNonRefundable!==true)return authJson({error:"REFUND_POLICY_REQUIRED"},400);
   const contactMethod=body.contactMethod==="whatsapp"?"whatsapp":body.contactMethod==="email"?"email":"";
   const contactValue=contactMethod==="whatsapp"?String(body.phone||"").trim().slice(0,32):String(user.email||"").trim();
-  if(!contactMethod||!contactValue)return authJson({error:"CONTACT_REQUIRED"},400);
+  if(!contactMethod||!contactValue||(contactMethod==="whatsapp"&&!/^\\+?[0-9\\s()-]{8,20}$/.test(contactValue)))return authJson({error:"CONTACT_REQUIRED"},400);
   const c=await env.DB.prepare("SELECT status,entry_fee_jod,title FROM competitions WHERE id=?").bind(competitionId).first();
   if(!c||c.status!=="registration")return authJson({error:"REGISTRATION_CLOSED"},409);
   const existing=await env.DB.prepare("SELECT status FROM competition_requests WHERE competition_id=? AND user_id=?").bind(competitionId,user.id).first();
@@ -757,7 +759,7 @@ async function handleStaff(request,env,url){
   const category=["complaint","suggestion","competition"].includes(b.category)?b.category:"";
   const body=String(b.body||"").trim().slice(0,3000),method=b.contactMethod==="whatsapp"?"whatsapp":b.contactMethod==="email"?"email":"";
   const contact=method==="whatsapp"?String(b.phone||"").trim().slice(0,32):String(user.email||"");
-  if(!category||body.length<3||!method||!contact)return authJson({error:"INVALID_MESSAGE"},400);
+  if(!category||body.length<3||!method||!contact||(method==="whatsapp"&&!/^\\+?[0-9\\s()-]{8,20}$/.test(contact)))return authJson({error:"INVALID_MESSAGE"},400);
   const id=authUuid(),now=new Date().toISOString();
   await env.DB.prepare("INSERT INTO staff_messages (id,user_id,category,subject,body,contact_method,contact_value,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,'new',?,?)").bind(id,user.id,category,category==="complaint"?"شكوى":category==="suggestion"?"اقتراح":"استفسار عن المسابقات",body,method,contact,now,now).run();
   return authJson({ok:true,id,message:"تم إرسال رسالتك إلى فريق الموظفين."},201);
