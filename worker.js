@@ -1045,7 +1045,7 @@ async function handleStaff(request,env,url){
  if(url.pathname==="/api/staff/messages"&&request.method==="GET"){
   if(!staffOk)return authJson({error:"STAFF_REQUIRED"},403);
   const rows=await env.DB.prepare("SELECT m.id,m.category,m.subject,m.body,m.contact_method,m.contact_value,m.competition_id,m.status,m.staff_note,m.created_at,u.username,u.first_name,u.last_name,u.email FROM staff_messages m JOIN users u ON u.id=m.user_id ORDER BY CASE m.status WHEN 'new' THEN 0 WHEN 'contacted' THEN 1 ELSE 2 END,m.created_at DESC LIMIT 250").all();
-  return authJson({messages:rows.results||[],role:member.role});
+  return authJson({messages:rows.results||[],role:"staff"});
  }
  if(url.pathname==="/api/staff/messages/status"&&request.method==="POST"){
   if(!staffOk)return authJson({error:"STAFF_REQUIRED"},403);
