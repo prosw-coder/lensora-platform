@@ -276,7 +276,7 @@ async function handleAuth(request,env,url){
  if(!["GET","POST"].includes(request.method))return authJson({error:"METHOD_NOT_ALLOWED"},405,{allow:"GET, POST"});
  if(request.method==="POST"){const origin=request.headers.get("Origin");if((origin&&origin!==url.origin)||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403);const size=Number(request.headers.get("Content-Length")||0);if(size>12000)return authJson({error:"REQUEST_TOO_LARGE"},413)}
  if(path==="/api/auth/me"&&request.method==="GET"){const user=await authCurrentUser(request,env);return authJson({authenticated:!!user,user})}
- if(path==="/api/auth/logout"&&request.method==="POST"){const token=authCookie(request,"lensora_session");if(token)await env.DB.prepare("DELETE FROM sessions WHERE token_hash=?").bind(await authHash(token)).run();return authJson({ok:true},{status:200,headers:{"set-cookie":authClearCookie()}})}
+ if(path==="/api/auth/logout"&&request.method==="POST"){const token=authCookie(request,"lensora_session");if(token)await env.DB.prepare("DELETE FROM sessions WHERE token_hash=?").bind(await authHash(token)).run();return authJson({ok:true},200,{"set-cookie":authClearCookie()})}
  if(path!=="/api/auth/register"&&path!=="/api/auth/login")return authJson({error:"NOT_FOUND"},404);
  let body;try{body=await request.json()}catch{return authJson({error:"INVALID_JSON"},400)}
  if(!body||typeof body!=="object"||Array.isArray(body))return authJson({error:"INVALID_INPUT"},400);
