@@ -877,7 +877,7 @@ async function handleProfile(request,env,url){
  if(!row)return authJson({error:"PROFILE_NOT_FOUND"},404);
  if(!row.skills_json)await env.DB.prepare("INSERT OR IGNORE INTO profiles (user_id,updated_at) VALUES (?,?)").bind(row.id,new Date().toISOString()).run();
  const full=row.skills_json?row:await env.DB.prepare("SELECT u.first_name,u.last_name,u.username,u.plan,p.bio,p.specialty,p.city,p.experience,p.skills_json,p.languages_json,p.avatar_url,p.cover_url,p.updated_at AS profile_updated_at FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.id=?").bind(row.id).first();
- const viewer=await authCurrentUser(request,env);return authJson({profile:profileSafe(full,!!viewer&&viewer.id===row.id)})
+ const viewer=await authCurrentUser(request,env); if(!viewer||viewer.id!==row.id){await env.DB.prepare("CREATE TABLE IF NOT EXISTS profile_visits (profile_user_id TEXT NOT NULL,visitor_hash TEXT NOT NULL,visit_day TEXT NOT NULL,viewed_at TEXT NOT NULL,PRIMARY KEY(profile_user_id,visitor_hash,visit_day))").run();const visitorHash=await authHash((request.headers.get("CF-Connecting-IP")||"unknown")+"|"+(request.headers.get("User-Agent")||"").slice(0,160));await env.DB.prepare("INSERT OR IGNORE INTO profile_visits (profile_user_id,visitor_hash,visit_day,viewed_at) VALUES (?,?,?,?)").bind(row.id,visitorHash,new Date().toISOString().slice(0,10),new Date().toISOString()).run();} return authJson({profile:profileSafe(full,!!viewer&&viewer.id===row.id)})
 }
 
 
