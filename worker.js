@@ -620,8 +620,6 @@ if(location.pathname==="/staff"){
  root.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><small style="color:#c9a45e;letter-spacing:2px">LENSORA · TEAM</small><h1>لوحة تحكم الموظفين</h1><p style="color:#aaa">طلبات المسابقات ورسائل المستخدمين وإدارة التواصل.</p></div><a class="btn ghost" href="/competitions">العودة للموقع</a></div><section id="compAdminPanel" style="margin-top:20px;padding:20px;background:#151711;border:1px solid #51452c;border-radius:12px"><p>جارٍ التحقق من صلاحيات الموظف...</p></section>';
  document.body.appendChild(root);
  fetch("/api/staff/messages",{credentials:"same-origin"}).then(async r=>{if(!r.ok)throw new Error("لا تملك صلاحية دخول لوحة الموظفين.");await loadCompetitionAdmin();await loadStaffInbox()}).catch(e=>{const panel=document.getElementById("compAdminPanel");if(panel)panel.innerHTML='<p style="color:#e5a99a">'+compEscape(e.message)+'</p>'});
-}else{
- fetch("/api/staff/messages",{credentials:"same-origin"}).then(r=>{if(r.ok){const staffBtn=document.createElement("button");staffBtn.textContent="لوحة الموظفين";staffBtn.style.cssText="position:fixed;bottom:72px;inset-inline-start:18px;z-index:50;background:#20231c;color:#e5cc91;border:1px solid #c9a45e;border-radius:30px;padding:10px 16px;font-weight:700";staffBtn.onclick=()=>location.href="/staff";document.body.appendChild(staffBtn)}}).catch(()=>{});
 }
 </script>
 </body></html>`;
