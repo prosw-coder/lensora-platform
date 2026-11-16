@@ -933,7 +933,7 @@ async function handleCompetitions(request,env,url){
  const path=url.pathname.replace("/api/competitions/demo","/api/competitions");
  const user=await authCurrentUser(request,env);
  const isAdmin=async()=>!!user&&!!(await env.DB.prepare("SELECT 1 AS ok FROM competition_admins WHERE user_id=?").bind(user.id).first());
- const isStaff=async()=>!!user&&!!(await env.DB.prepare("SELECT 1 AS ok FROM staff_members WHERE user_id=?").bind(user.id).first());
+ const isStaff=async()=>!!user&&!!(await env.DB.prepare("SELECT 1 AS ok FROM staff_members WHERE user_id=?").bind(user.id).first())&&await panelSessionValid(request,env,"staff");
  if(path==="/api/competitions/public"&&request.method==="GET"){
   const voterHash=await competitionVoterHash(request);
   const c=await env.DB.prepare("SELECT id,title,description,entry_fee_jod,prize_jod,max_participants,status,start_at FROM competitions WHERE id=?").bind(competitionId).first();
@@ -1026,7 +1026,7 @@ async function handleStaff(request,env,url){
  if(!env?.DB)return authJson({error:"DATABASE_UNAVAILABLE"},503);
  const user=await authCurrentUser(request,env);
  const member=user?await env.DB.prepare("SELECT role FROM staff_members WHERE user_id=?").bind(user.id).first():null;
- const staffOk=!!member,owner=member?.role==="owner";
+ const staffOk=!!member&&await panelSessionValid(request,env,"staff"),owner=member?.role==="owner"&&await panelSessionValid(request,env,"admin");
  if(request.method==="POST"){const origin=request.headers.get("Origin");if(origin!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403)}
  if(url.pathname==="/api/staff/messages"&&request.method==="POST"){
   if(!user)return authJson({error:"AUTH_REQUIRED"},401);
