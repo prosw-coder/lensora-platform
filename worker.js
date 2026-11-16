@@ -696,7 +696,7 @@ async function handleCompetitions(request,env,url){
   if(body?.acceptNonRefundable!==true)return authJson({error:"REFUND_POLICY_REQUIRED"},400);
   const contactMethod=body.contactMethod==="whatsapp"?"whatsapp":body.contactMethod==="email"?"email":"";
   const contactValue=contactMethod==="whatsapp"?String(body.phone||"").trim().slice(0,32):String(user.email||"").trim();
-  if(!contactMethod||!contactValue||(contactMethod==="whatsapp"&&!/^\\+?[0-9\\s()-]{8,20}$/.test(contactValue)))return authJson({error:"CONTACT_REQUIRED"},400);
+  if(!contactMethod||!contactValue||(contactMethod==="whatsapp"&&!/^\+?[0-9\s()-]{8,20}$/.test(contactValue)))return authJson({error:"CONTACT_REQUIRED"},400);
   const c=await env.DB.prepare("SELECT status,entry_fee_jod,title FROM competitions WHERE id=?").bind(competitionId).first();
   if(!c||c.status!=="registration")return authJson({error:"REGISTRATION_CLOSED"},409);
   const existing=await env.DB.prepare("SELECT status FROM competition_requests WHERE competition_id=? AND user_id=?").bind(competitionId,user.id).first();
@@ -759,7 +759,7 @@ async function handleStaff(request,env,url){
   const category=["complaint","suggestion","competition"].includes(b.category)?b.category:"";
   const body=String(b.body||"").trim().slice(0,3000),method=b.contactMethod==="whatsapp"?"whatsapp":b.contactMethod==="email"?"email":"";
   const contact=method==="whatsapp"?String(b.phone||"").trim().slice(0,32):String(user.email||"");
-  if(!category||body.length<3||!method||!contact||(method==="whatsapp"&&!/^\\+?[0-9\\s()-]{8,20}$/.test(contact)))return authJson({error:"INVALID_MESSAGE"},400);
+  if(!category||body.length<3||!method||!contact||(method==="whatsapp"&&!/^\+?[0-9\s()-]{8,20}$/.test(contact)))return authJson({error:"INVALID_MESSAGE"},400);
   const id=authUuid(),now=new Date().toISOString();
   await env.DB.prepare("INSERT INTO staff_messages (id,user_id,category,subject,body,contact_method,contact_value,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,'new',?,?)").bind(id,user.id,category,category==="complaint"?"شكوى":category==="suggestion"?"اقتراح":"استفسار عن المسابقات",body,method,contact,now,now).run();
   return authJson({ok:true,id,message:"تم إرسال رسالتك إلى فريق الموظفين."},201);
