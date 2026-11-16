@@ -1030,6 +1030,29 @@ async function handleStaff(request,env,url){
  const user=await authCurrentUser(request,env);
  const member=user?await env.DB.prepare("SELECT role FROM staff_members WHERE user_id=?").bind(user.id).first():null;
  const staffOk=await panelSessionValid(request,env,"staff"),owner=member?.role==="owner"&&await panelSessionValid(request,env,"admin");
+ if(staffOk){
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS staff_user_features (user_id TEXT NOT NULL,feature_key TEXT NOT NULL,enabled INTEGER NOT NULL DEFAULT 0,updated_at TEXT NOT NULL,updated_by TEXT NOT NULL,PRIMARY KEY(user_id,feature_key))").run();
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS staff_user_actions (id TEXT PRIMARY KEY,staff_role TEXT NOT NULL,action TEXT NOT NULL,target_user_id TEXT NOT NULL,details TEXT,created_at TEXT NOT NULL)").run();
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS profile_visits (profile_user_id TEXT NOT NULL,visitor_hash TEXT NOT NULL,visit_day TEXT NOT NULL,viewed_at TEXT NOT NULL,PRIMARY KEY(profile_user_id,visitor_hash,visit_day))").run();
+ }
+ if(url.pathname==="/api/staff/users"&&request.method==="GET"){
+  if(!staffOk)return authJson({error:"STAFF_REQUIRED"},403);
+  const q=String(url.searchParams.get("q")||"").trim().slice(0,80);if(q.length<2)return authJson({users:[]});
+  const like="%"+q+"%";
+  const rows=await env.DB.prepare("SELECT u.id,u.first_name,u.last_name,u.username,u.email,u.status,u.plan,u.created_at,(SELECT COUNT(*) FROM profile_visits v WHERE v.profile_user_id=u.id) AS visits FROM users u WHERE u.id=? OR u.username LIKE ? OR u.email LIKE ? OR u.first_name LIKE ? OR u.last_name LIKE ? ORDER BY u.created_at DESC LIMIT 30").bind(q,like,like,like,like).all();
+  const features={};for(const id of (rows.results||[]).map(x=>x.id)){const f=await env.DB.prepare("SELECT feature_key,enabled FROM staff_user_features WHERE user_id=?").bind(id).all();features[id]=Object.fromEntries((f.results||[]).map(x=>[x.feature_key,!!x.enabled]));}
+  return authJson({users:(rows.results||[]).map(x=>({...x,features:features[x.id]||{}}))});
+ }
+ if(url.pathname==="/api/staff/users/action"&&request.method==="POST"){
+  if(!staffOk)return authJson({error:"STAFF_REQUIRED"},403);let b;try{b=await request.json()}catch{return authJson({error:"INVALID_JSON"},400)}
+  const userId=String(b.userId||"").slice(0,80),action=String(b.action||"");const target=await env.DB.prepare("SELECT id,status FROM users WHERE id=?").bind(userId).first();if(!target)return authJson({error:"USER_NOT_FOUND"},404);
+  const now=new Date().toISOString();let details="";
+  if(action==="block"||action==="unblock"){if(action==="block"&&target.status!=="active")return authJson({error:"USER_NOT_ACTIVE"},409);if(action==="unblock"&&target.status!=="blocked")return authJson({error:"USER_NOT_BLOCKED"},409);await env.DB.prepare("UPDATE users SET status=?,updated_at=? WHERE id=?").bind(action==="block"?"blocked":"active",now,userId).run();details=String(b.reason||"").trim().slice(0,300);}
+  else if(action==="feature"){const key=String(b.featureKey||"");const allowed=["profile_badge","rewards","portfolio_uploads","competitions","pro_tools"];if(!allowed.includes(key)||typeof b.enabled!=="boolean")return authJson({error:"INVALID_FEATURE"},400);await env.DB.prepare("INSERT INTO staff_user_features (user_id,feature_key,enabled,updated_at,updated_by) VALUES (?,?,?,?,?) ON CONFLICT(user_id,feature_key) DO UPDATE SET enabled=excluded.enabled,updated_at=excluded.updated_at,updated_by=excluded.updated_by").bind(userId,key,b.enabled?1:0,now,"staff-panel").run();details=key+":"+(b.enabled?"enabled":"disabled");}
+  else return authJson({error:"INVALID_ACTION"},400);
+  await env.DB.prepare("INSERT INTO staff_user_actions (id,staff_role,action,target_user_id,details,created_at) VALUES (?,?,?,?,?,?)").bind(authUuid(),"staff",action,userId,details,now).run();return authJson({ok:true});
+ }
+ if(url.pathname==="/api/staff/users/audit"&&request.method==="GET"){if(!staffOk)return authJson({error:"STAFF_REQUIRED"},403);const rows=await env.DB.prepare("SELECT a.action,a.target_user_id,a.details,a.created_at,u.username,u.first_name,u.last_name FROM staff_user_actions a LEFT JOIN users u ON u.id=a.target_user_id ORDER BY a.created_at DESC LIMIT 100").all();return authJson({actions:rows.results||[]});}
  if(request.method==="POST"){const origin=request.headers.get("Origin");if(origin!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403)}
  if(url.pathname==="/api/staff/messages"&&request.method==="POST"){
   if(!user)return authJson({error:"AUTH_REQUIRED"},401);
