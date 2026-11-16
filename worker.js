@@ -227,7 +227,10 @@ function showAuth(type){
  const authForm=$("#authForm");
  authForm.addEventListener("submit",e=>{e.preventDefault();runAuthSubmit()});
  const authSubmitButton=authForm.querySelector(".auth-submit");
- authSubmitButton.type="submit";
+ authSubmitButton.type="button";
+ authSubmitButton.disabled=false;
+ authSubmitButton.onclick=e=>{e.preventDefault();runAuthSubmit()};
+ authSubmitButton.addEventListener("pointerup",e=>{if(e.pointerType==="touch"){e.preventDefault();runAuthSubmit()}},{passive:false});
 }
 $("#lang").onclick=()=>{let v=lang==="ar"?"en":"ar";try{localStorage.setItem("lensora-language",v)}catch(e){}setLanguage(v)};
 $("#theme").onclick=()=>{document.body.classList.toggle("light");let v=document.body.classList.contains("light")?"light":"dark";try{localStorage.setItem("lensora-theme",v)}catch(e){}};
