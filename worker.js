@@ -142,6 +142,38 @@ body:not(.competition-standalone) #competitions{display:none!important}.competit
 .competition-contender button{width:100%;padding:8px 10px}
 .competition-contender button:disabled{opacity:.55;cursor:not-allowed;transform:none}
 @media(max-width:480px){.competition-match-card{padding:11px}.competition-duel{gap:5px}.competition-contender{padding:10px 5px}.competition-contender b{font-size:12px}.competition-match-head{align-items:flex-start;flex-direction:column}}
+
+.competition-post-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.competition-post-tile{display:block;width:100%;padding:0;text-align:start;border:1px solid #ffffff20;border-radius:12px;overflow:hidden;background:#10120f;color:#f4ead7;cursor:pointer;transition:transform .2s,border-color .2s}
+.competition-post-tile:hover{transform:translateY(-3px);border-color:#c9a45e}
+.competition-post-top{display:flex;align-items:center;gap:9px;padding:10px 11px}
+.competition-post-top img{width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid #c9a45e}
+.competition-post-top b{font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis}
+.competition-post-top small{color:#c9a45e;font-size:10px}
+.competition-post-thumb{display:block;aspect-ratio:4/5;background:#191b17;overflow:hidden}
+.competition-post-thumb img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.competition-post-tile:hover .competition-post-thumb img{transform:scale(1.025)}
+.competition-post-bottom{display:flex;justify-content:space-between;gap:8px;padding:10px 11px;font-size:11px;color:#c9b98f}
+.competition-post-bottom b{color:#e4c37c}
+.competition-post-modal[hidden]{display:none!important}
+.competition-post-modal{position:fixed;inset:0;z-index:10050;display:grid;place-items:center;padding:18px}
+.competition-post-backdrop{position:absolute;inset:0;background:#000e;backdrop-filter:blur(7px)}
+.competition-post-dialog{position:relative;z-index:1;width:min(960px,100%);max-height:min(92vh,900px);display:grid;grid-template-columns:minmax(0,1.2fr) minmax(260px,.8fr);overflow:auto;background:#10120f;border:1px solid #a98545;border-radius:15px;box-shadow:0 24px 90px #000b}
+.competition-post-close{position:absolute;z-index:3;top:9px;inset-inline-end:9px;width:38px;height:38px;border:1px solid #ffffff55;border-radius:50%;background:#080908d9;color:white;font-size:27px;line-height:1;cursor:pointer}
+.competition-post-photo{min-height:360px;background:#080908;display:grid;place-items:center}
+.competition-post-photo img{display:block;width:100%;height:100%;max-height:88vh;object-fit:contain}
+.competition-post-details{padding:26px;display:flex;flex-direction:column;gap:15px}
+.competition-post-user{display:flex;align-items:center;gap:11px;padding-bottom:15px;border-bottom:1px solid #ffffff20}
+.competition-post-user img{width:48px;height:48px;border-radius:50%;object-fit:cover;border:1px solid #c9a45e}
+.competition-post-user b,.competition-post-user small{display:block}
+.competition-post-user small{color:#b6a27a;font-size:11px;margin-top:4px}
+.competition-post-caption{color:#e4d9c2;line-height:1.8}
+.competition-post-stats{display:flex;gap:22px;padding:14px 0;border-block:1px solid #ffffff20}
+.competition-post-stats span{color:#b9ad95;font-size:13px}
+.competition-post-stats b{display:block;color:#e4c37c;font-size:24px}
+.competition-post-rule,.competition-post-vote-note{color:#b8a77f;font-size:12px}
+.competition-post-vote{margin-top:auto}
+@media(max-width:650px){.competition-post-grid{gap:8px}.competition-post-top{gap:6px;padding:8px}.competition-post-top img{width:29px;height:29px}.competition-post-top b{font-size:10px}.competition-post-bottom{padding:8px;font-size:10px}.competition-post-dialog{grid-template-columns:1fr;max-height:94vh}.competition-post-photo{min-height:0;height:min(55vh,520px)}.competition-post-photo img{max-height:55vh}.competition-post-details{padding:17px;gap:11px}.competition-post-vote{min-height:44px}}
 </style>
 </head>
 <body>
@@ -427,6 +459,22 @@ setLanguage(lang);renderCreators();renderServices();let currentPath=location.pat
 
 if(location.pathname.startsWith("/competitions")){document.body.classList.add("competition-standalone");document.title="مسابقة LENSORA | LENSORA";}
 function compEscape(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'" :'&#39;'}[c]))}
+function ensureCompetitionPostModal(){
+ let modal=document.getElementById("competitionPostModal");if(modal)return modal;
+ modal=document.createElement("div");modal.id="competitionPostModal";modal.className="competition-post-modal";modal.hidden=true;
+ modal.innerHTML='<div class="competition-post-backdrop" data-post-close></div><section class="competition-post-dialog" role="dialog" aria-modal="true" aria-label="منشور المشاركة"><button class="competition-post-close" type="button" data-post-close aria-label="إغلاق">×</button><div class="competition-post-photo"><img id="competitionPostImage" alt="صورة المشاركة"></div><div class="competition-post-details"><div class="competition-post-user"><img id="competitionPostAvatar" alt=""><div><b id="competitionPostName"></b><small id="competitionPostSeed"></small></div></div><p class="competition-post-caption">مشاركة في مسابقة LENSORA · أجمل صورة بورتريه</p><div class="competition-post-stats"><span><b id="competitionPostVotes">0</b> صوت</span><span><b id="competitionPostPoints">0</b> نقطة</span></div><p class="competition-post-rule">كل صوت يساوي 5 نقاط</p><button class="btn competition-post-vote" id="competitionPostVote">صوّت لهذه المشاركة</button><small class="competition-post-vote-note" id="competitionPostVoteNote"></small></div></section>';
+ document.body.appendChild(modal);modal.querySelectorAll("[data-post-close]").forEach(el=>el.addEventListener("click",()=>{modal.hidden=true}));document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!modal.hidden)modal.hidden=true});return modal;
+}
+function openCompetitionPost(data){
+ const modal=ensureCompetitionPostModal(),image=document.getElementById("competitionPostImage"),avatar=document.getElementById("competitionPostAvatar");
+ image.src=data.image||"https://picsum.photos/seed/lensora-empty/900/1100";avatar.src=data.avatar||"https://i.pravatar.cc/120?img=12";
+ document.getElementById("competitionPostName").textContent=data.name||"مشارك";document.getElementById("competitionPostSeed").textContent="المشارك رقم "+data.seed;
+ document.getElementById("competitionPostVotes").textContent=String(data.votes);document.getElementById("competitionPostPoints").textContent=String(data.votes*5);
+ const vote=document.getElementById("competitionPostVote"),note=document.getElementById("competitionPostVoteNote");vote.disabled=!data.canVote;vote.textContent=data.voted?"تم التصويت في هذه المواجهة":"صوّت لهذه المشاركة";
+ note.textContent=data.voted?"لقد أدليت بصوتك في هذه المواجهة.":data.canVote?"صوت واحد لكل مواجهة. لا يمكن تغيير التصويت.":"التصويت غير متاح حالياً.";
+ vote.onclick=async()=>{if(!data.canVote||data.voted)return;if(!confirm("تأكيد التصويت؟ سيُضاف 5 نقاط لهذه المشاركة ولا يمكن تغيير صوتك."))return;vote.disabled=true;try{const api=location.pathname.endsWith("/demo")?"/api/competitions/demo":"/api/competitions";const response=await fetch(api+"/vote",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({matchId:data.matchId,participantId:data.participant})});const result=await response.json();if(!response.ok)throw new Error(result.error==="ALREADY_VOTED"?"لقد صوّت سابقاً في هذه المواجهة.":result.error||"تعذر تسجيل التصويت");modal.hidden=true;await loadCompetitionPanel()}catch(e){alert(e.message);vote.disabled=false}};
+ modal.hidden=false;
+}
 async function loadCompetitionPanel(){
  const note=document.getElementById("compStatus");if(!note)return;
  try{
@@ -440,20 +488,16 @@ async function loadCompetitionPanel(){
   const titleNode=document.querySelector(".competition-cover h1");if(titleNode&&data.competition?.title)titleNode.textContent=data.competition.title;
   const descNode=document.querySelector(".competition-cover p");if(descNode&&data.competition?.description)descNode.textContent=data.competition.description;
   const participants=document.getElementById("compParticipants");
-  participants.innerHTML=(data.participants||[]).map(p=>'<span class="competition-participant">#'+Number(p.seed)+' · '+compEscape(p.first_name+' '+p.last_name)+'</span>').join("");
+  participants.innerHTML=(data.participants||[]).map(p=>'<span class="competition-participant">#'+Number(p.seed)+' · '+compEscape(p.username||p.first_name+' '+p.last_name)+'</span>').join("");
   const matchBox=document.getElementById("compMatches");
-  if(matchBox){
-   matchBox.innerHTML=(data.matches||[]).map(m=>{
-    const aName=compEscape([m.a_first_name,m.a_last_name].filter(Boolean).join(" ")||m.a_username||"المشارك الأول");
-    const bName=compEscape([m.b_first_name,m.b_last_name].filter(Boolean).join(" ")||m.b_username||"المشارك الثاني");
-    const voted=!!m.my_vote, ended=m.status==="completed"||(m.ends_at&&Date.parse(m.ends_at)<=Date.now());
-    return '<article class="competition-match-card"><div class="competition-match-head"><b>دور الـ64 · مواجهة '+Number(m.match_number)+'</b><small>'+(voted?'تم تسجيل صوتك':ended?'انتهى التصويت':'التصويت مفتوح لمدة 24 ساعة')+'</small></div><div class="competition-duel"><div class="competition-contender"><span class="competition-seed">#'+Number(m.match_number*2-1)+'</span><b>'+aName+'</b><small>'+Number(m.votes_a||0)+' صوت</small><button class="btn small" data-vote-match="'+compEscape(m.id)+'" data-vote-participant="'+compEscape(m.participant_a)+'" '+(voted||ended?'disabled':'')+'>'+(m.my_vote===m.participant_a?'صوتك هنا':'تصويت')+'</button></div><span class="competition-vs">VS</span><div class="competition-contender"><span class="competition-seed">#'+Number(m.match_number*2)+'</span><b>'+bName+'</b><small>'+Number(m.votes_b||0)+' صوت</small><button class="btn small" data-vote-match="'+compEscape(m.id)+'" data-vote-participant="'+compEscape(m.participant_b)+'" '+(voted||ended?'disabled':'')+'>'+(m.my_vote===m.participant_b?'صوتك هنا':'تصويت')+'</button></div></div></article>';
-   }).join("")||'<div class="competition-empty">لم تبدأ المواجهات بعد.</div>';
-   matchBox.querySelectorAll("[data-vote-match]").forEach(btn=>btn.addEventListener("click",async()=>{
-    if(!confirm("تأكيد التصويت لهذا المشارك؟ لا يمكن تغيير الصوت بعد تسجيله."))return;
-    btn.disabled=true;
-    try{const api=location.pathname.endsWith("/demo")?"/api/competitions/demo":"/api/competitions";const response=await fetch(api+"/vote",{method:"POST",credentials:"same-origin",headers:{"content-type":"application/json"},body:JSON.stringify({matchId:btn.dataset.voteMatch,participantId:btn.dataset.voteParticipant})});const result=await response.json();if(!response.ok)throw new Error(result.error==="ALREADY_VOTED"?"لقد صوّت سابقاً في هذه المواجهة.":result.error||"تعذر تسجيل التصويت");await loadCompetitionPanel();}catch(e){alert(e.message);btn.disabled=false}
-   }));
+  if(matchBox){matchBox.innerHTML=(data.matches||[]).map(m=>{
+   const voted=!!m.my_vote,ended=m.status==="completed"||(m.ends_at&&Date.parse(m.ends_at)<=Date.now()),canVote=data.competition.status==="active"&&!voted&&!ended&&m.status==="active";
+   const card=side=>{const a=side==="a",id=a?m.participant_a:m.participant_b,name=compEscape((a?[m.a_first_name,m.a_last_name]:[m.b_first_name,m.b_last_name]).filter(Boolean).join(" ")||(a?m.a_username:m.b_username)||"مشارك"),username=compEscape(a?m.a_username:m.b_username),avatar=compEscape((a?m.a_avatar_url:m.b_avatar_url)||""),image=compEscape((a?m.a_submission_image:m.b_submission_image)||""),votes=Number(a?m.votes_a:m.votes_b),seed=Number(m.match_number*2-(a?1:0));
+    return '<button type="button" class="competition-post-tile" data-open-post data-name="'+name+'" data-username="'+username+'" data-avatar="'+avatar+'" data-image="'+image+'" data-seed="'+seed+'" data-votes="'+votes+'" data-participant="'+compEscape(id||"")+'" data-match="'+compEscape(m.id)+'" data-can-vote="'+(canVote?'1':'0')+'" data-voted="'+(voted?'1':'0')+'"><span class="competition-post-top"><img src="'+(avatar||'https://i.pravatar.cc/120?img=12')+'" alt="" loading="lazy"><b>'+username+'</b><small>#'+seed+'</small></span><span class="competition-post-thumb"><img src="'+(image||'https://picsum.photos/seed/lensora-post-'+seed+'/900/1100')+'" alt="صورة مشاركة '+name+'" loading="lazy"></span><span class="competition-post-bottom"><span>♥ '+votes+' صوت</span><b>'+votes*5+' نقطة</b></span></button>';
+   };
+   return '<article class="competition-match-card"><div class="competition-match-head"><b>دور الـ64 · مواجهة '+Number(m.match_number)+'</b><small>'+(voted?'تم تسجيل صوتك في هذه المواجهة':ended?'انتهى التصويت':'التصويت مفتوح لمدة 24 ساعة')+'</small></div><div class="competition-post-grid">'+card("a")+card("b")+'</div></article>';
+  }).join("")||'<div class="competition-empty">لم تبدأ المواجهات بعد.</div>';
+  matchBox.querySelectorAll("[data-open-post]").forEach(btn=>btn.addEventListener("click",()=>openCompetitionPost({name:btn.dataset.name,username:btn.dataset.username,avatar:btn.dataset.avatar,image:btn.dataset.image,seed:btn.dataset.seed,votes:Number(btn.dataset.votes||0),participant:btn.dataset.participant,matchId:btn.dataset.match,canVote:btn.dataset.canVote==="1",voted:btn.dataset.voted==="1"})));
   }
   const adminButton=document.getElementById("compAdminToggle");adminButton.hidden=!data.isStaff;
   if(data.isStaff)adminButton.onclick=async()=>{const panel=document.getElementById("compAdminPanel");panel.hidden=!panel.hidden;if(!panel.hidden){await loadCompetitionAdmin();await loadStaffInbox()}};
@@ -729,8 +773,8 @@ async function handleCompetitions(request,env,url){
   if(!c)return authJson({error:"COMPETITION_NOT_FOUND"},404);
   const counts=await env.DB.prepare("SELECT (SELECT COUNT(*) FROM competition_participants WHERE competition_id=?) AS participants,(SELECT COUNT(*) FROM competition_requests WHERE competition_id=? AND status='pending') AS pending").bind(competitionId,competitionId).first();
   const visible=c.status==="active"||c.status==="completed";
-  const participants=visible?await env.DB.prepare("SELECT cp.seed,u.username,u.first_name,u.last_name,p.avatar_url FROM competition_participants cp JOIN users u ON u.id=cp.user_id LEFT JOIN profiles p ON p.user_id=u.id WHERE cp.competition_id=? ORDER BY cp.seed").bind(competitionId).all():{results:[]};
-  const matches=await env.DB.prepare("SELECT m.id,m.round,m.match_number,m.starts_at,m.ends_at,m.extension_count,m.status,m.winner_id,m.participant_a,m.participant_b,(SELECT v.participant_id FROM competition_votes v WHERE v.match_id=m.id AND v.voter_hash=?) AS my_vote,pa.username AS a_username,pa.first_name AS a_first_name,pa.last_name AS a_last_name,pb.username AS b_username,pb.first_name AS b_first_name,pb.last_name AS b_last_name,(SELECT COUNT(*) FROM competition_votes v WHERE v.match_id=m.id AND v.participant_id=m.participant_a) AS votes_a,(SELECT COUNT(*) FROM competition_votes v WHERE v.match_id=m.id AND v.participant_id=m.participant_b) AS votes_b FROM competition_matches m LEFT JOIN competition_participants ca ON ca.id=m.participant_a LEFT JOIN users pa ON pa.id=ca.user_id LEFT JOIN competition_participants cb ON cb.id=m.participant_b LEFT JOIN users pb ON pb.id=cb.user_id WHERE m.competition_id=? ORDER BY m.round DESC,m.match_number").bind(voterHash,competitionId).all();
+  const participants=visible?await env.DB.prepare("SELECT cp.seed,cp.id AS participant_id,cp.submission_image_url,u.username,u.first_name,u.last_name,p.avatar_url FROM competition_participants cp JOIN users u ON u.id=cp.user_id LEFT JOIN profiles p ON p.user_id=u.id WHERE cp.competition_id=? ORDER BY cp.seed").bind(competitionId).all():{results:[]};
+  const matches=await env.DB.prepare("SELECT m.id,m.round,m.match_number,m.starts_at,m.ends_at,m.extension_count,m.status,m.winner_id,m.participant_a,m.participant_b,(SELECT v.participant_id FROM competition_votes v WHERE v.match_id=m.id AND v.voter_hash=?) AS my_vote,pa.username AS a_username,pa.first_name AS a_first_name,pa.last_name AS a_last_name,pb.username AS b_username,pb.first_name AS b_first_name,pb.last_name AS b_last_name,COALESCE(NULLIF(ca.submission_image_url,''),(SELECT '/media/'||pw.object_key FROM profile_works pw WHERE pw.user_id=pa.id ORDER BY pw.created_at DESC LIMIT 1),'') AS a_submission_image,COALESCE(NULLIF(cb.submission_image_url,''),(SELECT '/media/'||pw.object_key FROM profile_works pw WHERE pw.user_id=pb.id ORDER BY pw.created_at DESC LIMIT 1),'') AS b_submission_image,apa.avatar_url AS a_avatar_url,apb.avatar_url AS b_avatar_url,(SELECT COUNT(*) FROM competition_votes v WHERE v.match_id=m.id AND v.participant_id=m.participant_a) AS votes_a,(SELECT COUNT(*) FROM competition_votes v WHERE v.match_id=m.id AND v.participant_id=m.participant_b) AS votes_b FROM competition_matches m LEFT JOIN competition_participants ca ON ca.id=m.participant_a LEFT JOIN users pa ON pa.id=ca.user_id LEFT JOIN profiles apa ON apa.user_id=pa.id LEFT JOIN competition_participants cb ON cb.id=m.participant_b LEFT JOIN users pb ON pb.id=cb.user_id LEFT JOIN profiles apb ON apb.user_id=pb.id WHERE m.competition_id=? ORDER BY m.round DESC,m.match_number").bind(voterHash,competitionId).all();
   return authJson({competition:c,counts:{...counts,participants:visible?Number(counts?.participants||0):0},participants:participants.results||[],matches:visible?(matches.results||[]):[],isAdmin:await isAdmin(),isStaff:await isStaff(),user:user?{id:user.id,username:user.username}:null});
  }
  if(path==="/api/competitions/vote"&&request.method==="POST"){
@@ -751,7 +795,7 @@ async function handleCompetitions(request,env,url){
   try{await env.DB.prepare("INSERT INTO competition_votes (id,match_id,participant_id,voter_hash,created_at) VALUES (?,?,?,?,?)").bind(authUuid(),matchId,participantId,voterHash,new Date().toISOString()).run();}
   catch(e){const duplicate=await env.DB.prepare("SELECT participant_id FROM competition_votes WHERE match_id=? AND voter_hash=?").bind(matchId,voterHash).first();if(duplicate)return authJson({error:"ALREADY_VOTED",votedFor:duplicate.participant_id},409);throw e;}
   const totals=await env.DB.prepare("SELECT SUM(CASE WHEN participant_id=? THEN 1 ELSE 0 END) AS votes_a,SUM(CASE WHEN participant_id=? THEN 1 ELSE 0 END) AS votes_b FROM competition_votes WHERE match_id=?").bind(match.participant_a,match.participant_b,matchId).first();
-  return authJson({ok:true,votesA:Number(totals?.votes_a||0),votesB:Number(totals?.votes_b||0),message:"تم تسجيل صوتك بنجاح."},201);
+  return authJson({ok:true,votesA:Number(totals?.votes_a||0),votesB:Number(totals?.votes_b||0),pointsA:Number(totals?.votes_a||0)*5,pointsB:Number(totals?.votes_b||0)*5,pointsPerVote:5,message:"تم تسجيل صوتك بنجاح. أضيفت 5 نقاط للمشارك."},201);
  }
  if(path==="/api/competitions/requests"&&request.method==="POST"){
   if(!user)return authJson({error:"AUTH_REQUIRED"},401);
