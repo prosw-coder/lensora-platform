@@ -685,11 +685,12 @@ async function handleCompetitions(request,env,url){
   if(req.status!=="pending")return authJson({error:"REQUEST_NOT_PENDING"},409);
   const count=await env.DB.prepare("SELECT COUNT(*) AS n FROM competition_participants WHERE competition_id=?").bind(competitionId).first();
   if(Number(count?.n||0)>=64)return authJson({error:"COMPETITION_FULL"},409);
-  const participantId=authUuid(),now=new Date().toISOString(),seed=Number(count?.n||0)+1;
-  const inserted=await env.DB.prepare("INSERT INTO competition_participants (id,competition_id,user_id,seed,joined_at) SELECT ?,?,?,?,? WHERE (SELECT COUNT(*) FROM competition_participants WHERE competition_id=?)<64 AND EXISTS(SELECT 1 FROM competition_requests WHERE id=? AND status='pending')").bind(participantId,competitionId,req.user_id,seed,now,competitionId,requestId).run();
+  const participantId=authUuid(),now=new Date().toISOString();
+  const inserted=await env.DB.prepare("INSERT INTO competition_participants (id,competition_id,user_id,seed,joined_at) SELECT ?,?,?,(SELECT COUNT(*)+1 FROM competition_participants WHERE competition_id=?),? WHERE (SELECT COUNT(*) FROM competition_participants WHERE competition_id=?)<64 AND EXISTS(SELECT 1 FROM competition_requests WHERE id=? AND status='pending')").bind(participantId,competitionId,req.user_id,competitionId,now,competitionId,requestId).run();
   if(!inserted.meta?.changes)return authJson({error:"CAPACITY_OR_STATUS_CHANGED"},409);
   await env.DB.prepare("UPDATE competition_requests SET status='activated',updated_at=? WHERE id=? AND status='pending'").bind(now,requestId).run();
-  return authJson({ok:true,participantId,seed,participantCount:seed,message:"تم تفعيل المشاركة. أرسل تأكيداً للمشارك عبر البريد الإلكتروني."},200);
+  const joined=await env.DB.prepare("SELECT seed FROM competition_participants WHERE id=?").bind(participantId).first();
+  return authJson({ok:true,participantId,seed:joined.seed,participantCount:joined.seed,message:"تم تفعيل المشاركة. أرسل تأكيداً للمشارك عبر البريد الإلكتروني."},200);
  }
  return authJson({error:"NOT_FOUND"},404);
 }
