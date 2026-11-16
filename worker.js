@@ -413,7 +413,7 @@ if(location.pathname==="/competitions"){document.body.classList.add("competition
  try{
   const res=await fetch("/api/competitions/public",{credentials:"same-origin"}),data=await res.json();
   if(!res.ok)throw new Error(data.error||"تعذر تحميل المسابقة");
-  document.getElementById("compCount").textContent=(data.counts?.participants||0)+" / 64";
+  document.getElementById("compCount").textContent=String(data.counts?.participants||0);const progress=document.getElementById("compProgress");if(progress)progress.style.width=Math.min(100,(Number(data.counts?.participants||0)/64)*100)+"%";
   note.textContent=data.competition.status==="registration"?"التسجيل مفتوح. المقاعد لا تُحجز إلا بعد استلام الرسوم وتفعيل الإدارة.":data.competition.status==="active"?"المسابقة جارية. تابع المواجهات والتصفيات هنا.":data.competition.status==="completed"?"انتهت المسابقة.":"المسابقة قيد التجهيز وسيُعلن فتح التسجيل قريباً.";
   document.getElementById("compApply").disabled=data.competition.status!=="registration";
   document.getElementById("compApply").textContent=data.competition.status==="registration"?"طلب المشاركة":"التسجيل غير متاح حالياً";
