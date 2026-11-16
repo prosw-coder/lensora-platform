@@ -250,7 +250,7 @@ setLanguage(lang);renderCreators();renderServices();let currentPath=location.pat
 </script>
 </body></html>`;
 
-const AUTH_POLICY_VERSION = "prohibited-content-2026-11-16-v1";
+const AUTH_POLICY_VERSION = "prohibited-content-2026-11-16-v2";
 const AUTH_PASSWORD_ITERATIONS = 180000;
 const AUTH_SESSION_SECONDS = 30 * 24 * 60 * 60;
 const authEncoder = new TextEncoder();
