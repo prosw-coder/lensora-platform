@@ -423,7 +423,7 @@ async function handleAuth(request,env,url){
     env.DB.prepare("INSERT INTO sessions (id,user_id,token_hash,created_at,expires_at,last_seen_at,user_agent) VALUES (?,?,?,?,?,?,?)").bind(sessionId,id,tokenHash,now,expires,now,(request.headers.get("User-Agent")||"").slice(0,240))
    ]);
   }catch(e){console.error("LENSORA_REGISTER_DB_ERROR",e);const duplicate=await env.DB.prepare("SELECT id FROM users WHERE username_norm=? OR email_norm=? LIMIT 1").bind(usernameNorm,emailNorm).first().catch(()=>null);if(duplicate)return authJson({error:"ACCOUNT_EXISTS"},409);throw e}
-  const user={id,firstName,lastName,username,email,createdAt:now};
+  const user={id,firstName,lastName,username,email,createdAt:now,plan:"free"};
   return authJson({ok:true,user},201,{"set-cookie":authSetCookie(token)});
  }
  const identity=String(body.identity||"").trim().replace(/^@+/,"").toLowerCase(),password=String(body.password||"");
@@ -448,7 +448,7 @@ async function handleProfile(request,env,url){
  if(!url.pathname.startsWith("/api/profile/"))return null;
  if(!env?.DB)return authJson({error:"PROFILE_NOT_CONFIGURED"},503);
  if(!["GET","PUT","POST"].includes(request.method))return authJson({error:"METHOD_NOT_ALLOWED"},405,{allow:"GET, PUT, POST"});
- if(request.method!=="GET"){const origin=request.headers.get("Origin");if((origin&&origin!==url.origin)||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403);const size=Number(request.headers.get("Content-Length")||0);if(size>16000)return authJson({error:"REQUEST_TOO_LARGE"},413)}
+ if(request.method!=="GET"){const origin=request.headers.get("Origin");if((origin&&origin!==url.origin)||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403);const size=Number(request.headers.get("Content-Length")||0),maxSize=url.pathname==="/api/profile/avatar"?5*1024*1024:16000;if(size>maxSize)return authJson({error:"REQUEST_TOO_LARGE"},413)}
  if(url.pathname==="/api/profile/avatar"&&request.method==="POST"){
   const user=await authCurrentUser(request,env);if(!user)return authJson({error:"AUTH_REQUIRED"},401);
   if(!env.MEDIA)return authJson({error:"MEDIA_NOT_CONFIGURED"},503);
@@ -456,13 +456,13 @@ async function handleProfile(request,env,url){
   if(!ext)return authJson({error:"UNSUPPORTED_IMAGE_TYPE"},415);
   const length=Number(request.headers.get("Content-Length")||0);if(length>5*1024*1024)return authJson({error:"IMAGE_TOO_LARGE"},413);
   const bytes=await request.arrayBuffer();if(!bytes.byteLength||bytes.byteLength>5*1024*1024)return authJson({error:"IMAGE_TOO_LARGE"},413);
-  const now=new Date().toISOString(),key="profile-avatars/"+user.id+"/"+authUuid()+"."+ext;
+  const now=new Date().toISOString(),key="profile-avatars/"+user.id+"/"+authUuid()+"."+ext,mediaUrl="/media/"+key.split("/").map(encodeURIComponent).join("/");
   await env.MEDIA.put(key,bytes,{httpMetadata:{contentType:mime,cacheControl:"public, max-age=31536000, immutable"}});
   await env.DB.prepare("INSERT OR IGNORE INTO profiles (user_id,updated_at) VALUES (?,?)").bind(user.id,now).run();
   const old=await env.DB.prepare("SELECT avatar_url FROM profiles WHERE user_id=?").bind(user.id).first();
-  await env.DB.prepare("UPDATE profiles SET avatar_url=?,updated_at=? WHERE user_id=?").bind("/media/"+encodeURIComponent(key),now,user.id).run();
+  await env.DB.prepare("UPDATE profiles SET avatar_url=?,updated_at=? WHERE user_id=?").bind(mediaUrl,now,user.id).run();
   const oldUrl=String(old?.avatar_url||"");if(oldUrl.startsWith("/media/profile-avatars/"+user.id+"/")){const oldKey=decodeURIComponent(oldUrl.slice(7));if(oldKey!==key)await env.MEDIA.delete(oldKey).catch(()=>{});}
-  return authJson({ok:true,avatarUrl:"/media/"+encodeURIComponent(key)},201);
+  return authJson({ok:true,avatarUrl:mediaUrl},201);
  }
  if(url.pathname==="/api/profile/me"){
   const user=await authCurrentUser(request,env);if(!user)return authJson({error:"AUTH_REQUIRED"},401);
