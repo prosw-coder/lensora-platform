@@ -452,7 +452,7 @@ function openCompetitionRequest(){
 async function loadStaffInbox(){
  const p=document.getElementById("compAdminPanel");if(!p)return;
  try{const r=await fetch("/api/staff/messages",{credentials:"same-origin"}),d=await r.json();if(!r.ok)throw new Error(d.error||"تعذر تحميل الرسائل");
- p.insertAdjacentHTML("beforeend",'<section id="staffInbox" style="margin-top:20px;border-top:1px solid #66512b;padding-top:15px"><h3>صندوق رسائل الموظفين</h3><div id="staffRows"></div><h4>إضافة موظف</h4><input id="staffEmail" placeholder="البريد المسجل للموظف" style="padding:10px;background:#222;color:#fff"><button id="staffAdd" class="btn small">إضافة</button><p id="staffFeedback"></p></section>');
+
  const previous=p.querySelector("#staffInbox");if(previous)previous.remove();
  p.insertAdjacentHTML("beforeend",'<section id="staffInbox" style="margin-top:20px;border-top:1px solid #66512b;padding-top:15px"><h3>صندوق رسائل الموظفين</h3><div id="staffRows"></div><h4>إضافة موظف</h4><input id="staffEmail" placeholder="البريد المسجل للموظف" style="padding:10px;background:#222;color:#fff"><button id="staffAdd" class="btn small">إضافة</button><p id="staffFeedback"></p></section>');
  const rows=p.querySelector("#staffRows");const cats=[["complaint","الشكاوى"],["suggestion","الاقتراحات"],["competition","المسابقات"]];
