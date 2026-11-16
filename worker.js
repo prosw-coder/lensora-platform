@@ -95,6 +95,34 @@ body.en .creator-actions .text-btn:hover{transform:translateX(3px)}
 .auth-feedback{min-height:0;color:var(--gold2);font-size:12px;line-height:1.8;margin:0}
 .auth-legal{font-size:11px!important;text-align:center;margin:17px 0 0}
 @media(max-width:700px){.auth-layout{grid-template-columns:1fr;margin:-22px -16px}.auth-brand-panel{display:none}.auth-form-panel{padding:28px 20px}.auth-form-panel>h2{font-size:25px}.auth-form{grid-template-columns:1fr}.auth-field{grid-column:1/-1}.modal-card:has(.auth-layout){padding:22px 16px}.auth-help-row{display:grid}}
+
+/* Rebuilt, single-path authentication UI */
+.auth-rebuild{width:min(560px,100%);margin:0 auto;padding:8px 2px 2px}
+.auth-rebuild-head{display:flex;align-items:center;gap:17px;margin:0 0 22px;padding:4px 0 20px;border-bottom:1px solid var(--line)}
+.auth-logo-mark{width:64px;height:64px;flex:0 0 64px;border:1px solid var(--gold);border-radius:50%;display:grid;place-items:center;box-shadow:0 0 28px #c9a45e20}
+.auth-logo-mark span{width:33px;height:33px;border:2px solid var(--gold);border-radius:50%;position:relative}
+.auth-logo-mark span:after{content:"";position:absolute;width:9px;height:9px;inset:0;margin:auto;border-radius:50%;background:var(--gold);box-shadow:0 0 14px var(--gold)}
+.auth-rebuild-head h2{font-size:clamp(23px,4vw,30px);margin:5px 0}
+.auth-rebuild-head p{margin:0;color:var(--muted);font-size:13px;line-height:1.8}
+.auth-rebuild .auth-tabs{margin:0 0 18px}
+.auth-form-rebuild{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.auth-form-rebuild .auth-field{display:grid;gap:7px;min-width:0}
+.auth-form-rebuild .auth-field span{font-size:12px;color:var(--soft);font-weight:700}
+.auth-form-rebuild .auth-field input{width:100%;min-width:0;min-height:47px;padding:12px 13px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);outline:none}
+.auth-form-rebuild .auth-field input:focus{border-color:var(--gold);box-shadow:0 0 0 3px #c9a45e20}
+.auth-form-rebuild:has([name="identity"]) .auth-field,.auth-form-rebuild:has([name="identity"]) .auth-submit,.auth-form-rebuild:has([name="identity"]) .auth-feedback{grid-column:1/-1}
+.auth-form-rebuild .auth-policy-wrap,.auth-form-rebuild .auth-submit,.auth-form-rebuild .auth-feedback{grid-column:1/-1}
+.auth-form-rebuild .auth-policy{display:flex;align-items:flex-start;gap:10px;margin:0;font-size:12px;line-height:1.8;color:var(--soft)}
+.auth-form-rebuild .auth-policy input{width:17px;height:17px;flex:0 0 17px;margin:3px 0 0;accent-color:var(--gold)}
+.auth-form-rebuild .auth-policy-details{margin-top:8px;color:var(--gold2);font-size:12px}
+.auth-form-rebuild .auth-policy-details summary{cursor:pointer;padding:5px 0;text-decoration:underline;text-underline-offset:3px}
+.auth-form-rebuild .auth-policy-copy{max-height:35vh;overflow:auto;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--muted);line-height:1.9}
+.auth-form-rebuild .auth-submit{width:100%;min-height:49px;margin-top:3px;border-radius:8px}
+.auth-form-rebuild .auth-submit:disabled{opacity:.65;cursor:wait;transform:none}
+.auth-form-rebuild .auth-feedback{min-height:24px;margin:0;color:var(--gold2);font-size:13px;line-height:1.8}
+.auth-security-note{margin:10px 0 0;text-align:center;color:var(--muted);font-size:11px;line-height:1.8}
+@media(max-width:620px){.modal{padding:10px}.modal-card:has(.auth-rebuild){width:100%;max-height:94vh;padding:20px 16px}.auth-rebuild-head{gap:12px}.auth-logo-mark{width:52px;height:52px;flex-basis:52px}.auth-logo-mark span{width:27px;height:27px}.auth-form-rebuild{grid-template-columns:1fr;gap:11px}.auth-form-rebuild .auth-field{grid-column:1/-1}.auth-rebuild .auth-tabs button{padding:11px 6px;font-size:13px}}
+
 </style>
 </head>
 <body>
@@ -214,23 +242,98 @@ function applyAuthUser(user){currentAuthUser=user||null;const login=$("#login"),
 function showAccount(){if(!currentAuthUser)return;const n=(currentAuthUser.firstName+" "+currentAuthUser.lastName).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));const u=String(currentAuthUser.username).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));$("#modalContent").innerHTML='<div class="eyebrow">LENSORA / ACCOUNT</div><h2>'+(lang==="ar"?"مرحباً، ":"Welcome, ")+n+'</h2><p class="auth-subtitle">@'+u+'</p><button type="button" class="btn" id="authLogout">'+(lang==="ar"?"تسجيل الخروج":"Sign out")+'</button>';$("#modal").classList.add("open");$("#authLogout").onclick=async()=>{try{await fetch("/api/auth/logout",{method:"POST",credentials:"same-origin"})}finally{applyAuthUser(null);$("#modal").classList.remove("open")}}}
 function showAuth(type){
  const isLogin=type==="login";
- const title=isLogin?(lang==="ar"?"مرحباً بعودتك":"Welcome back"):(lang==="ar"?"انضم إلى LENSORA":"Join LENSORA");
- const subtitle=isLogin?(lang==="ar"?"سجّل دخولك لمتابعة عالمك الإبداعي.":"Sign in to continue your creative journey."):(lang==="ar"?"أنشئ حسابك وابدأ بعرض أعمالك والوصول إلى مجتمع المبدعين.":"Create your account and showcase your work to a creative community.");
- const field=(label,name,placeholder,inputType="text",required=true)=>'<label class="auth-field"><span>'+label+'</span><input name="'+name+'" type="'+inputType+'" placeholder="'+placeholder+'" '+(required?'required':'')+' autocomplete="'+(name==="password"?(isLogin?"current-password":"new-password"):name)+'"></label>';
- const loginFields=field(lang==="ar"?"البريد الإلكتروني أو اسم المستخدم":"Email or username","identity",lang==="ar"?"أدخل بريدك أو اسم المستخدم":"Enter email or username")+field(lang==="ar"?"كلمة المرور":"Password","password",lang==="ar"?"أدخل كلمة المرور":"Enter your password","password");
- const signupFields=field(lang==="ar"?"الاسم الأول":"First name","firstName",lang==="ar"?"الاسم الأول":"First name")+field(lang==="ar"?"اسم العائلة":"Last name","lastName",lang==="ar"?"اسم العائلة":"Last name")+field(lang==="ar"?"اسم المستخدم":"Username","username","@username")+field(lang==="ar"?"البريد الإلكتروني":"Email","email","name@example.com","email")+field(lang==="ar"?"كلمة المرور":"Password","password",lang==="ar"?"8 أحرف على الأقل":"At least 8 characters","password")+field(lang==="ar"?"تأكيد كلمة المرور":"Confirm password","confirmPassword",lang==="ar"?"أعد كتابة كلمة المرور":"Re-enter your password","password");
- const policy=lang==="ar"?"أوافق على شروط المحتوى الممنوع نشره في LENSORA":"I agree to LENSORA's prohibited-content policy";
- $("#modalContent").innerHTML='<div class="auth-layout"><div class="auth-brand-panel"><div class="auth-brand-mark"><span></span></div><div class="eyebrow">LENSORA / CREATIVE COMMUNITY</div><h2>'+(lang==="ar"?"مساحتك، رؤيتك، إبداعك":"Your space. Your vision. Your creativity.")+'</h2><p>'+(lang==="ar"?"منصة تجمع المصورين وصنّاع الفيديو والمصممين والمبدعين البصريين في مكان واحد.":"A home for photographers, filmmakers, designers and visual creators.")+'</p><div class="auth-brand-line"></div></div><div class="auth-form-panel"><div class="eyebrow">ACCOUNT ACCESS</div><h2>'+title+'</h2><p class="auth-subtitle">'+subtitle+'</p><div class="auth-tabs"><button type="button" data-auth-tab="login" class="'+(isLogin?"active":"")+'">'+(lang==="ar"?"تسجيل الدخول":"Sign in")+'</button><button type="button" data-auth-tab="signup" class="'+(!isLogin?"active":"")+'">'+(lang==="ar"?"إنشاء حساب":"Create account")+'</button></div><form id="authForm" class="auth-form">'+(isLogin?loginFields:signupFields)+(!isLogin?'<div class="auth-policy-wrap"><label class="auth-policy"><input type="checkbox" name="policy" required><span>'+policy+'</span></label><details class="auth-policy-details"><summary>'+(lang==="ar"?"عرض سياسة المحتوى ومعايير النشر":"View content policy & publishing standards")+'</summary><div class="auth-policy-copy"><h3>'+(lang==="ar"?"سياسة المحتوى ومعايير النشر":"Content Policy & Publishing Standards")+'</h3><p>'+(lang==="ar"?"تلتزم LENSORA بتوفير بيئة مهنية وآمنة لعرض الإبداع، ويجب على الأعضاء احترام القانون وكرامة الآخرين وحقوقهم وخصوصيتهم.":"LENSORA is committed to a professional and safe creative environment. Members must respect the law, and the dignity, rights and privacy of others.")+'</p><h4>'+(lang==="ar"?"أولاً: المحتوى المحظور":"1. Prohibited content")+'</h4><ul><li>'+(lang==="ar"?"المحتوى الإباحي أو الجنسي الصريح، والعري الصريح أو إظهار الأعضاء الحميمة بقصد جنسي.":"Pornographic or explicitly sexual content, and explicit nudity or intimate body parts presented for sexual purposes.")+'</li><li>'+(lang==="ar"?"الاستغلال الجنسي للأطفال، أو أي محتوى جنسي يتضمن قاصراً، أو محتوى ينتهك خصوصية القاصرين أو يعرّضهم للخطر أو الاستغلال.":"Child sexual exploitation, any sexual content involving a minor, or content that violates minors’ privacy or exposes them to danger or exploitation.")+'</li><li>'+(lang==="ar"?"الترويج للتدخين أو التبغ أو النيكوتين أو التشجيع على استخدامها.":"Promotion or encouragement of smoking, tobacco or nicotine use.")+'</li><li>'+(lang==="ar"?"العنف الصادم أو الدماء والمشاهد القاسية بقصد الصدمة أو التمجيد، والتهديد أو التحريض على إيذاء الآخرين.":"Graphic violence or gore intended to shock or glorify harm, threats, or incitement to hurt others.")+'</li><li>'+(lang==="ar"?"التحرش أو الكراهية أو الإذلال أو الاستغلال أو انتهاك الكرامة أو الحقوق أو الخصوصية.":"Harassment, hateful abuse, humiliation, exploitation, or violations of dignity, rights or privacy.")+'</li><li>'+(lang==="ar"?"انتحال الشخصية أو سرقة الأعمال أو نشرها دون إذن أو ادعاء ملكيتها أو انتهاك حقوق الملكية الفكرية.":"Impersonation, stealing or publishing work without permission, falsely claiming ownership, or infringing intellectual-property rights.")+'</li><li>'+(lang==="ar"?"الاحتيال أو التهديد أو المحتوى المخالف للقانون أو المستخدم للإضرار بالآخرين.":"Fraud, threats, unlawful content, or content used to harm others.")+'</li></ul><h4>'+(lang==="ar"?"ثانياً: الأعمال الفنية والسياق":"2. Artistic work and context")+'</h4><p>'+(lang==="ar"?"لا تُعد الصور العائلية الاعتيادية أو الأعمال الفنية أو التوثيقية أو الطبية أو التعليمية المشروعة مخالفة تلقائياً لمجرد موضوعها؛ ويُقيّم كل عمل وفق سياقه وطريقة عرضه والغرض منه والخصوصية والسلامة. لا ينطبق أي استثناء على استغلال القاصرين أو المحتوى الجنسي المتعلق بهم.":"Ordinary family photographs and legitimate artistic, documentary, medical or educational work are not automatically violations solely because of their subject. Each work is assessed by context, presentation, purpose, privacy and safety. No exception applies to exploitation or sexual content involving minors.")+'</p><h4>'+(lang==="ar"?"ثالثاً: الملكية والمسؤولية":"3. Ownership and responsibility")+'</h4><p>'+(lang==="ar"?"يجب أن تكون الأعمال من إنتاج العضو أو مستخدمة بإذن أو أساس قانوني. العضو مسؤول عن المحتوى الذي ينشره وعن احترام حقوق الأشخاص والملكية الفكرية.":"Work must be created by the member or used with permission or another lawful basis. Members are responsible for what they publish and for respecting personal and intellectual-property rights.")+'</p><h4>'+(lang==="ar"?"رابعاً: البلاغات والإجراءات":"4. Reports and enforcement")+'</h4><p>'+(lang==="ar"?"تراجع LENSORA البلاغات ولا يؤدي البلاغ وحده إلى حذف تلقائي. وبحسب طبيعة المخالفة وجسامتها وتكرارها، قد تتخذ المنصة إجراءً يشمل طلب توضيح أو إزالة العمل أو تقييد ميزة أو تعليق الحساب أو حظره. ويمكن اتخاذ إجراء احترازي عاجل عند وجود خطر واضح أو التزام قانوني.":"LENSORA reviews reports; a report alone does not trigger automatic removal. Depending on the nature, severity and repetition of a violation, action may include requesting clarification, removing work, restricting a feature, suspending or banning an account. Urgent protective action may be taken where there is a clear risk or legal obligation.")+'</p><h4>'+(lang==="ar"?"خامساً: الإشعار والاعتراض":"5. Notice and appeal")+'</h4><p>'+(lang==="ar"?"تُبلّغ المنصة العضو بالإجراء وسببه متى أمكن، ويحق له تقديم اعتراض لمراجعته وفق إجراءات المنصة، ما لم يمنع القانون أو سلامة الأشخاص ذلك.":"Where feasible, the member will be notified of the action and its reason and may appeal for review under platform procedures, unless law or personal safety prevents it.")+'</p><p class="notice">'+(lang==="ar"?"قد تُحدّث هذه السياسة عند الحاجة، وقد يُطلب من الأعضاء إعادة الموافقة عند إجراء تغييرات جوهرية.":"This policy may be updated when necessary; members may be asked to accept material changes again.")+'</p></div></details></div></div>':'<div class="auth-help-row"><span>'+ (lang==="ar"?"هل نسيت كلمة المرور؟":"Forgot your password?")+'</span><span class="auth-muted">'+(lang==="ar"?"استعادة الحساب ستتوفر قريباً":"Account recovery will be available soon")+'</span></div>')+'<button class="btn auth-submit" type="submit">'+(isLogin?(lang==="ar"?"دخول إلى حسابي":"Sign in to my account"):(lang==="ar"?"إنشاء حسابي":"Create my account"))+' <span>↗</span></button><p class="auth-feedback" id="authFeedback" role="status"></p></form><p class="auth-legal">'+(lang==="ar"?"بمتابعتك، أنت توافق على شروط استخدام LENSORA.":"By continuing, you agree to LENSORA's terms of use.")+'</p></div></div>';
+ const ar=lang==="ar";
+ const title=isLogin?(ar?"مرحباً بعودتك":"Welcome back"):(ar?"أنشئ حساب LENSORA":"Create your LENSORA account");
+ const subtitle=isLogin?(ar?"أدخل بياناتك للوصول إلى حسابك.":"Enter your details to access your account."):(ar?"ابدأ رحلتك الإبداعية وأنشئ ملفك المهني.":"Start your creative journey and build your professional profile.");
+ const field=(label,name,placeholder,inputType,autocomplete,attrs="")=>'<label class="auth-field"><span>'+label+'</span><input name="'+name+'" type="'+inputType+'" placeholder="'+placeholder+'" autocomplete="'+autocomplete+'" '+attrs+' required></label>';
+ const loginFields=field(ar?"البريد الإلكتروني أو اسم المستخدم":"Email or username","identity",ar?"البريد أو اسم المستخدم":"Email or username","text","username")+"<div class=\"auth-password-field\">"+field(ar?"كلمة المرور":"Password","password",ar?"أدخل كلمة المرور":"Enter your password","password","current-password")+"</div>";
+ const signupFields=
+  field(ar?"الاسم الأول":"First name","firstName",ar?"الاسم الأول":"First name","text","given-name",'maxlength="40"')+
+  field(ar?"اسم العائلة":"Last name","lastName",ar?"اسم العائلة":"Last name","text","family-name",'maxlength="40"')+
+  field(ar?"اسم المستخدم":"Username","username","username","text","username",'minlength="3" maxlength="24" pattern="[A-Za-z0-9._-]{3,24}"')+
+  field(ar?"البريد الإلكتروني":"Email","email","name@example.com","email","email",'maxlength="254"')+
+  field(ar?"كلمة المرور":"Password","password",ar?"8 أحرف على الأقل":"At least 8 characters","password","new-password",'minlength="8" maxlength="128"')+
+  field(ar?"تأكيد كلمة المرور":"Confirm password","confirmPassword",ar?"أعد كتابة كلمة المرور":"Re-enter your password","password","new-password",'minlength="8" maxlength="128"');
+ const policy=ar?"أوافق على شروط المحتوى ومعايير النشر في LENSORA":"I agree to LENSORA's content policy and publishing standards";
+ const policyHtml='<div class="auth-policy-wrap"><label class="auth-policy"><input type="checkbox" name="policy" required><span>'+policy+'</span></label><details class="auth-policy-details"><summary>'+(ar?"اقرأ سياسة المحتوى قبل الموافقة":"Read the content policy before accepting")+'</summary><div class="auth-policy-copy"><h3>'+(ar?"سياسة المحتوى":"Content policy")+'</h3><p>'+(ar?"يُمنع نشر المحتوى الإباحي أو الجنسي الصريح، واستغلال الأطفال أو أي محتوى جنسي يتضمن قاصراً، والترويج للتبغ والنيكوتين، والعنف الصادم أو التحريض على الإيذاء، والتحرش والكراهية والإذلال والاستغلال، وانتحال الشخصية والاحتيال وسرقة الأعمال أو انتهاك حقوق الملكية الفكرية والخصوصية.":"Pornographic or explicitly sexual content, child exploitation or sexual content involving minors, promotion of tobacco or nicotine, graphic violence or incitement to harm, harassment, hate, humiliation, exploitation, impersonation, fraud, stolen work, and violations of intellectual property or privacy are prohibited.")+'</p><p>'+(ar?"يجب أن تكون الأعمال من إنتاجك أو أن تملك إذناً أو أساساً قانونياً لاستخدامها. الصور العائلية المعتادة والأعمال الفنية أو التوثيقية أو الطبية أو التعليمية المشروعة لا تُعد مخالفة تلقائياً؛ ويُقيّم كل عمل وفق سياقه وسلامة الأشخاص وخصوصيتهم.":"You must own your work or have permission or another lawful basis to use it. Ordinary family photographs and legitimate artistic, documentary, medical or educational work are not automatically prohibited; context, safety and privacy are considered.")+'</p><p>'+(ar?"تراجع LENSORA البلاغات، ولا يؤدي البلاغ وحده إلى حذف تلقائي. قد تشمل الإجراءات إزالة المحتوى أو التحذير أو التعليق أو الحظر، مع إبلاغ العضو وحقه في الاعتراض متى أمكن.":"LENSORA reviews reports; a report alone does not automatically remove content. Actions may include content removal, warnings, suspension or bans, with notice and an opportunity to appeal where feasible.")+'</p></div></details></div>';
+ const switchTabs='<div class="auth-tabs" role="tablist"><button type="button" data-auth-tab="login" role="tab" aria-selected="'+isLogin+'" class="'+(isLogin?"active":"")+'">'+(ar?"تسجيل الدخول":"Sign in")+'</button><button type="button" data-auth-tab="signup" role="tab" aria-selected="'+(!isLogin)+'" class="'+(!isLogin?"active":"")+'">'+(ar?"إنشاء حساب":"Create account")+'</button></div>';
+ $("#modalContent").innerHTML=
+  '<section class="auth-rebuild" dir="'+(ar?"rtl":"ltr")+'">'+
+   '<header class="auth-rebuild-head"><div class="auth-logo-mark"><span></span></div><div><div class="eyebrow">LENSORA · ACCOUNT</div><h2>'+title+'</h2><p>'+subtitle+'</p></div></header>'+
+   switchTabs+
+   '<form id="authForm" class="auth-form-rebuild" novalidate>'+(isLogin?loginFields:signupFields)+(isLogin?'':'<div class="auth-policy-wrap">'+policyHtml+'</div>')+
+   '<button class="btn auth-submit" type="submit">'+(isLogin?(ar?"دخول إلى حسابي":"Sign in to my account"):(ar?"إنشاء حسابي":"Create my account"))+' <span aria-hidden="true">↗</span></button>'+
+   '<p class="auth-feedback" id="authFeedback" role="status" aria-live="polite"></p></form>'+
+   '<p class="auth-security-note">'+(ar?"لن نطلب منك كلمة المرور أو رمز الاستعادة عبر الدعم.":"LENSORA support will never ask for your password or recovery code.")+'</p>'+
+  '</section>';
  $("#modal").classList.add("open");
- $$("[data-auth-tab]").forEach(b=>b.onclick=()=>showAuth(b.dataset.authTab));
- const runAuthSubmit=async()=>{const form=$("#authForm");if(!form)return;const feedback=$("#authFeedback");if(!form.reportValidity()){const invalid=form.querySelector(":invalid");feedback.textContent=lang==="ar"?"يرجى تعبئة جميع الحقول المطلوبة والموافقة على شروط المحتوى، ثم المحاولة مجدداً.":"Please complete all required fields and accept the content policy, then try again.";invalid?.focus();return}const submit=form.querySelector(".auth-submit"),values=Object.fromEntries(new FormData(form).entries());if(!isLogin&&values.password!==values.confirmPassword){feedback.textContent=lang==="ar"?"كلمتا المرور غير متطابقتين.":"Passwords do not match.";return}submit.disabled=true;submit.textContent=lang==="ar"?"جارٍ المعالجة...":"Please wait...";let requestTimer;try{const controller=new AbortController();requestTimer=setTimeout(()=>controller.abort(),20000);const response=await fetch(isLogin?"/api/auth/login":"/api/auth/register",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",signal:controller.signal,body:JSON.stringify(isLogin?{identity:values.identity,password:values.password}:{firstName:values.firstName,lastName:values.lastName,username:values.username,email:values.email,password:values.password,policyAccepted:values.policy==="on"})});const raw=await response.text();let data;try{data=JSON.parse(raw)}catch{throw new Error("INVALID_SERVER_RESPONSE")};if(!response.ok){const messages={ACCOUNT_EXISTS:lang==="ar"?"اسم المستخدم أو البريد الإلكتروني مستخدم بالفعل.":"Username or email is already in use.",INVALID_NAME:lang==="ar"?"يرجى إدخال الاسم الأول واسم العائلة بشكل صحيح.":"Please enter a valid first and last name.",INVALID_USERNAME:lang==="ar"?"اسم المستخدم غير صالح. استخدم 3 إلى 24 حرفاً أو رقماً أو . _ -":"Invalid username. Use 3–24 letters, numbers, dots, underscores or hyphens.",RESERVED_USERNAME:lang==="ar"?"اسم المستخدم محجوز للمنصة أو الإدارة.":"This username is reserved.",INVALID_EMAIL:lang==="ar"?"البريد الإلكتروني غير صالح.":"Invalid email address.",INVALID_PASSWORD:lang==="ar"?"كلمة المرور يجب أن تكون بين 8 و128 حرفاً.":"Password must be 8–128 characters.",POLICY_REQUIRED:lang==="ar"?"يجب الموافقة على شروط المحتوى الممنوع.":"You must accept the prohibited-content policy.",TOO_MANY_ATTEMPTS:lang==="ar"?"محاولات كثيرة. حاول بعد 15 دقيقة.":"Too many attempts. Try again in 15 minutes.",INVALID_CREDENTIALS:lang==="ar"?"بيانات الدخول غير صحيحة. تحقق من البريد أو اسم المستخدم وكلمة المرور.":"Invalid sign-in details. Check your email or username and password."};feedback.textContent=messages[data.error]||(data.error==="SERVER_ERROR"?(lang==="ar"?(isLogin?"تعذر تسجيل الدخول بسبب خطأ تقني. رقم المرجع: ":"تعذر إنشاء الحساب بسبب خطأ تقني. رقم المرجع: ")+(data.requestId||"غير متاح"):(isLogin?"A technical error prevented sign-in. Reference: ":"A technical error prevented account creation. Reference: ")+(data.requestId||"unavailable")):(lang==="ar"?"تعذر إكمال العملية. حاول مرة أخرى.":"Could not complete the request. Please try again."));return}applyAuthUser(data.user);feedback.textContent=isLogin?(lang==="ar"?"تم تسجيل الدخول بنجاح. أهلاً بعودتك.":"You are signed in. Welcome back."):(lang==="ar"?"تم إنشاء حسابك بنجاح. أهلاً بك في LENSORA.":"Your account has been created. Welcome to LENSORA.");}catch(err){feedback.textContent=err.name==="AbortError"?(lang==="ar"?"استغرق الخادم وقتاً أطول من المتوقع؛ انتهت مهلة الطلب. حاول مجدداً.":"The request timed out. Please try again."):err.message==="INVALID_SERVER_RESPONSE"?(lang==="ar"?"وصل رد غير متوقع من الخادم. حاول مجدداً.":"Unexpected server response. Please retry."):(lang==="ar"?"تعذر الاتصال بالخادم. تحقق من الاتصال وحاول مجدداً.":"Could not reach the server. Check your connection and try again.")}finally{clearTimeout(requestTimer);submit.disabled=false;submit.innerHTML=(isLogin?(lang==="ar"?"دخول إلى حسابي":"Sign in to my account"):(lang==="ar"?"إنشاء حسابي":"Create my account"))+' <span>↗</span>'}};
- const authForm=$("#authForm");
- authForm.addEventListener("submit",e=>{e.preventDefault();runAuthSubmit()});
- const authSubmitButton=authForm.querySelector(".auth-submit");
- authSubmitButton.type="button";
- authSubmitButton.disabled=false;
- authSubmitButton.onclick=e=>{e.preventDefault();runAuthSubmit()};
- authSubmitButton.addEventListener("pointerup",e=>{if(e.pointerType==="touch"){e.preventDefault();runAuthSubmit()}},{passive:false});
+ $$("[data-auth-tab]").forEach(button=>button.addEventListener("click",()=>showAuth(button.dataset.authTab)));
+ const form=$("#authForm");
+ const submit=form.querySelector(".auth-submit");
+ const feedback=$("#authFeedback");
+ form.addEventListener("submit",async event=>{
+  event.preventDefault();
+  if(form.dataset.busy==="1")return;
+  if(!form.reportValidity()){
+   feedback.textContent=ar?"يرجى مراجعة الحقول المطلوبة وإكمالها.":"Please complete all required fields.";
+   return;
+  }
+  const values=Object.fromEntries(new FormData(form).entries());
+  if(!isLogin&&values.password!==values.confirmPassword){
+   feedback.textContent=ar?"كلمتا المرور غير متطابقتين.":"The passwords do not match.";
+   form.elements.confirmPassword.focus();
+   return;
+  }
+  if(!isLogin&&values.policy!=="on"){
+   feedback.textContent=ar?"يجب الموافقة على سياسة المحتوى للمتابعة.":"You must accept the content policy to continue.";
+   return;
+  }
+  form.dataset.busy="1";
+  submit.disabled=true;
+  submit.setAttribute("aria-busy","true");
+  submit.textContent=ar?"جارٍ إرسال الطلب...":"Submitting...";
+  feedback.textContent=ar?"يتم الاتصال بالخادم الآن…":"Connecting to the server…";
+  let timer;
+  try{
+   const controller=new AbortController();
+   timer=setTimeout(()=>controller.abort(),20000);
+   const response=await fetch(isLogin?"/api/auth/login":"/api/auth/register",{
+    method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",signal:controller.signal,
+    body:JSON.stringify(isLogin?{identity:values.identity,password:values.password}:{firstName:values.firstName,lastName:values.lastName,username:values.username,email:values.email,password:values.password,policyAccepted:values.policy==="on"})
+   });
+   const raw=await response.text();
+   let data;
+   try{data=JSON.parse(raw)}catch{throw new Error("INVALID_SERVER_RESPONSE")}
+   if(!response.ok){
+    const messages={
+     ACCOUNT_EXISTS:ar?"اسم المستخدم أو البريد الإلكتروني مستخدم بالفعل.":"Username or email is already in use.",
+     INVALID_NAME:ar?"يرجى إدخال الاسم الأول واسم العائلة بشكل صحيح.":"Enter a valid first and last name.",
+     INVALID_USERNAME:ar?"اسم المستخدم غير صالح؛ استخدم 3 إلى 24 حرفاً أو رقماً أو . _ -":"Invalid username. Use 3–24 letters, numbers, dots, underscores or hyphens.",
+     RESERVED_USERNAME:ar?"اسم المستخدم محجوز للمنصة أو الإدارة.":"This username is reserved.",
+     INVALID_EMAIL:ar?"البريد الإلكتروني غير صالح.":"Invalid email address.",
+     INVALID_PASSWORD:ar?"كلمة المرور يجب أن تكون بين 8 و128 حرفاً.":"Password must be 8–128 characters.",
+     POLICY_REQUIRED:ar?"يجب الموافقة على سياسة المحتوى.":"You must accept the content policy.",
+     TOO_MANY_ATTEMPTS:ar?"محاولات كثيرة. حاول بعد 15 دقيقة.":"Too many attempts. Try again in 15 minutes.",
+     INVALID_CREDENTIALS:ar?"بيانات الدخول غير صحيحة. تحقق من البريد أو اسم المستخدم وكلمة المرور.":"Incorrect sign-in details. Check your email or username and password."
+    };
+    feedback.textContent=messages[data.error]||(data.error==="SERVER_ERROR"?(ar?"حدث خطأ تقني. رقم المرجع: ":"A technical error occurred. Reference: ")+(data.requestId||"—"):(ar?"تعذر إكمال العملية. حاول مجدداً.":"The request could not be completed. Please try again."));
+    return;
+   }
+   if(!data||!data.user)throw new Error("INVALID_SERVER_RESPONSE");
+   applyAuthUser(data.user);
+   feedback.textContent=isLogin?(ar?"تم تسجيل الدخول بنجاح. أهلاً بعودتك.":"Signed in successfully. Welcome back."):(ar?"تم إنشاء حسابك بنجاح. أهلاً بك في LENSORA.":"Your LENSORA account has been created successfully.");
+  }catch(error){
+   feedback.textContent=error.name==="AbortError"?(ar?"انتهت مهلة الاتصال بالخادم. حاول مجدداً.":"The server took too long to respond. Please retry."):error.message==="INVALID_SERVER_RESPONSE"?(ar?"وصل رد غير مفهوم من الخادم.":"The server returned an unexpected response."):(ar?"تعذر الاتصال بالخادم. تحقق من الإنترنت وحاول مجدداً.":"Could not connect to the server. Check your connection and retry.");
+  }finally{
+   clearTimeout(timer);
+   form.dataset.busy="0";
+   submit.disabled=false;
+   submit.removeAttribute("aria-busy");
+   submit.innerHTML=(isLogin?(ar?"دخول إلى حسابي":"Sign in to my account"):(ar?"إنشاء حسابي":"Create my account"))+' <span aria-hidden="true">↗</span>';
+  }
+ });
+ const firstInput=form.querySelector("input");
+ if(firstInput)firstInput.focus({preventScroll:true});
 }
 $("#lang").onclick=()=>{let v=lang==="ar"?"en":"ar";try{localStorage.setItem("lensora-language",v)}catch(e){}setLanguage(v)};
 $("#theme").onclick=()=>{document.body.classList.toggle("light");let v=document.body.classList.contains("light")?"light":"dark";try{localStorage.setItem("lensora-theme",v)}catch(e){}};
