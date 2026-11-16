@@ -261,7 +261,7 @@ function showAuth(type){
   '<section class="auth-rebuild" dir="'+(ar?"rtl":"ltr")+'">'+
    '<header class="auth-rebuild-head"><div class="auth-logo-mark"><span></span></div><div><div class="eyebrow">LENSORA · ACCOUNT</div><h2>'+title+'</h2><p>'+subtitle+'</p></div></header>'+
    switchTabs+
-   '<form id="authForm" class="auth-form-rebuild" novalidate>'+(isLogin?loginFields:signupFields)+(isLogin?'':'<div class="auth-policy-wrap">'+policyHtml+'</div>')+
+   '<form id="authForm" class="auth-form-rebuild" novalidate>'+(isLogin?loginFields:signupFields)+(isLogin?'':policyHtml)+
    '<button class="btn auth-submit" type="submit">'+(isLogin?(ar?"دخول إلى حسابي":"Sign in to my account"):(ar?"إنشاء حسابي":"Create my account"))+' <span aria-hidden="true">↗</span></button>'+
    '<p class="auth-feedback" id="authFeedback" role="status" aria-live="polite"></p></form>'+
    '<p class="auth-security-note">'+(ar?"لن نطلب منك كلمة المرور أو رمز الاستعادة عبر الدعم.":"LENSORA support will never ask for your password or recovery code.")+'</p>'+
