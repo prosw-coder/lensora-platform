@@ -471,6 +471,7 @@ async function handleProfile(request,env,url){
   return authJson({ok:true,avatarUrl:mediaUrl},201);
  }
  if(url.pathname==="/api/profile/me"){
+  if(!["GET","PUT"].includes(request.method))return authJson({error:"METHOD_NOT_ALLOWED"},405,{allow:"GET, PUT"});
   const user=await authCurrentUser(request,env);if(!user)return authJson({error:"AUTH_REQUIRED"},401);
   if(request.method==="GET"){await env.DB.prepare("INSERT OR IGNORE INTO profiles (user_id,updated_at) VALUES (?,?)").bind(user.id,new Date().toISOString()).run();const row=await env.DB.prepare("SELECT u.first_name,u.last_name,u.username,u.plan,p.bio,p.specialty,p.city,p.experience,p.skills_json,p.languages_json,p.avatar_url,p.cover_url,p.updated_at AS profile_updated_at FROM users u JOIN profiles p ON p.user_id=u.id WHERE u.id=? AND u.status='active'").bind(user.id).first();return authJson({profile:profileSafe(row,true)})}
   let body;try{body=await request.json()}catch{return authJson({error:"INVALID_JSON"},400)}
