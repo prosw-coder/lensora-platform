@@ -693,7 +693,7 @@ async function handleCompetitions(request,env,url){
   const contactMethod=body.contactMethod==="whatsapp"?"whatsapp":body.contactMethod==="email"?"email":"";
   const contactValue=contactMethod==="whatsapp"?String(body.phone||"").trim().slice(0,32):String(user.email||"").trim();
   if(!contactMethod||!contactValue)return authJson({error:"CONTACT_REQUIRED"},400);
-  const c=await env.DB.prepare("SELECT status,entry_fee_jod FROM competitions WHERE id=?").bind(competitionId).first();
+  const c=await env.DB.prepare("SELECT status,entry_fee_jod,title FROM competitions WHERE id=?").bind(competitionId).first();
   if(!c||c.status!=="registration")return authJson({error:"REGISTRATION_CLOSED"},409);
   const existing=await env.DB.prepare("SELECT status FROM competition_requests WHERE competition_id=? AND user_id=?").bind(competitionId,user.id).first();
   if(existing)return authJson({error:"REQUEST_ALREADY_EXISTS",status:existing.status},409);
@@ -711,7 +711,7 @@ async function handleCompetitions(request,env,url){
   return authJson({requests:rows.results||[],participantCount:Number(c?.n||0),capacity:64});
  }
  if(url.pathname==="/api/competitions/admin/activate"&&request.method==="POST"){
-  if(!await isAdmin())return authJson({error:"ADMIN_REQUIRED"},403);
+  if(!await isStaff())return authJson({error:"STAFF_REQUIRED"},403);
   const origin=request.headers.get("Origin");if(origin!==url.origin||request.headers.get("Sec-Fetch-Site")==="cross-site")return authJson({error:"CROSS_SITE_REQUEST"},403);
   let body;try{body=await request.json()}catch{return authJson({error:"INVALID_JSON"},400)}
   const requestId=String(body?.requestId||"");if(!/^[a-f0-9-]{36}$/i.test(requestId))return authJson({error:"INVALID_REQUEST_ID"},400);
